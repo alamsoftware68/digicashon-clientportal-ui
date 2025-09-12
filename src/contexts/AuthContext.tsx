@@ -179,6 +179,13 @@ interface AuthContextType {
   isLoading: boolean;
   login: (mobileOrEmail: string, password: string) => Promise<boolean>;
   signup: (signupData: SignupData) => Promise<boolean>;
+  // New signup flow methods
+  sendSignupOTP: (mobile: string) => Promise<{ success: boolean; data?: any; message: string }>;
+  verifySignupOTP: (mobile: string, otpCode: string) => Promise<{ success: boolean; data?: any; message: string }>;
+  completeSignup: (signupData: { mobile: string; name: string; email: string; password: string; city: string }) => Promise<{ success: boolean; data?: any; message: string }>;
+  // New login OTP flow methods
+  sendLoginOTP: (mobile: string) => Promise<{ success: boolean; data?: any; message: string }>;
+  verifyLoginOTP: (mobile: string, otpCode: string) => Promise<{ success: boolean; data?: any; message: string }>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   changePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
@@ -270,7 +277,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (mobileOrEmail: string, password: string): Promise<boolean> => {
     try {
-      // Check if it's demo credentials first (for development)
+      // Try real backend login first
+      try {
+        const result = await apiService.login(mobileOrEmail, password);
+        
+        if (result.success && result.data) {
+          // Transform API response to user data format
+          const userData = {
+            id: result.data.id.toString(),
+            username: result.data.phone,
+            name: result.data.name,
+            email: result.data.email,
+            phone: result.data.phone,
+            addresses: [],
+            orders: [],
+            paymentMethods: [],
+            invoices: []
+          };
+          
+          setUser(userData);
+          setIsLoggedIn(true);
+          
+          // Persist user data for page refresh compatibility
+          localStorage.setItem('repairapp_user', JSON.stringify(userData));
+          localStorage.setItem('repairapp_authenticated', 'true');
+          localStorage.setItem('repairapp_login_time', Date.now().toString());
+          
+          // Dispatch auth change event
+          window.dispatchEvent(new CustomEvent('authChanged', { 
+            detail: { type: 'login', user: userData } 
+          }));
+          
+          return true;
+        }
+      } catch (backendError) {
+        console.log('Backend login failed, trying fallback:', backendError);
+      }
+      
+      // Fallback to demo credentials for development
       const isDemoAdmin = mobileOrEmail === DEMO_CREDENTIALS.admin.mobile && password === DEMO_CREDENTIALS.admin.password;
       const isDemoUser = mobileOrEmail === DEMO_CREDENTIALS.user.mobile && password === DEMO_CREDENTIALS.user.password;
       
@@ -593,12 +637,179 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return true;
   };
 
+  // New signup flow methods
+  const sendSignupOTP = async (mobile: string) => {
+    try {
+      const result = await apiService.sendSignupMobileOTP(mobile);
+      return {
+        success: result.success,
+        data: result.data,
+        message: result.message
+      };
+    } catch (error: any) {
+      console.error('Send signup OTP error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to send OTP'
+      };
+    }
+  };
+
+  // New login OTP flow methods
+  const sendLoginOTP = async (mobile: string) => {
+    try {
+      const result = await apiService.sendLoginOTP(mobile);
+      return {
+        success: result.success,
+        data: result.data,
+        message: result.message
+      };
+    } catch (error: any) {
+      console.error('Send login OTP error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to send login OTP'
+      };
+    }
+  };
+
+  const verifyLoginOTP = async (mobile: string, otpCode: string) => {
+    try {
+      const result = await apiService.verifyLoginOTP(mobile, otpCode);
+      
+      if (result.success && result.data) {
+        // Transform API response to user data format
+        const userData = {
+          id: result.data.id.toString(),
+          username: result.data.phone,
+          name: result.data.name,
+          email: result.data.email,
+          phone: result.data.phone,
+          addresses: [],
+          orders: [],
+          paymentMethods: [],
+          invoices: []
+        };
+        
+        // Update context state
+        setUser(userData);
+        setIsLoggedIn(true);
+        
+        // Persist user data
+        localStorage.setItem('repairapp_user', JSON.stringify(userData));
+        localStorage.setItem('repairapp_authenticated', 'true');
+        localStorage.setItem('repairapp_login_time', Date.now().toString());
+        
+        // Dispatch auth change event
+        window.dispatchEvent(new CustomEvent('authChanged', { 
+          detail: { type: 'login', user: userData } 
+        }));
+        
+        return {
+          success: true,
+          data: { user: userData, tokens: result.data },
+          message: result.message
+        };
+      }
+      
+      return {
+        success: false,
+        message: result.message || 'OTP verification failed'
+      };
+    } catch (error: any) {
+      console.error('Verify login OTP error:', error);
+      return {
+        success: false,
+        message: error.message || 'OTP verification failed'
+      };
+    }
+  };
+
+  const verifySignupOTP = async (mobile: string, otpCode: string) => {
+    try {
+      const result = await apiService.verifySignupOTP(mobile, otpCode);
+      return {
+        success: result.success,
+        data: result.data,
+        message: result.message
+      };
+    } catch (error: any) {
+      console.error('Verify signup OTP error:', error);
+      return {
+        success: false,
+        message: error.message || 'OTP verification failed'
+      };
+    }
+  };
+
+  const completeSignup = async (signupData: { mobile: string; name: string; email: string; password: string; city: string }) => {
+    try {
+      const result = await apiService.completeSignup(signupData);
+      
+      if (result.success && result.data) {
+        // Handle successful registration with tokens
+        const { user: apiUser, tokens } = result.data;
+        
+        // Create user data in the format expected by AuthContext
+        const userData = {
+          id: apiUser.id.toString(),
+          username: apiUser.mobile,
+          name: apiUser.name,
+          email: apiUser.email,
+          phone: apiUser.mobile,
+          addresses: [],
+          orders: [],
+          paymentMethods: [],
+          invoices: []
+        };
+        
+        // Update context state
+        setUser(userData);
+        setIsLoggedIn(true);
+        
+        // Persist user data
+        localStorage.setItem('repairapp_user', JSON.stringify(userData));
+        localStorage.setItem('repairapp_authenticated', 'true');
+        localStorage.setItem('repairapp_login_time', Date.now().toString());
+        
+        // Dispatch auth change event
+        window.dispatchEvent(new CustomEvent('authChanged', { 
+          detail: { type: 'login', user: userData } 
+        }));
+        
+        return {
+          success: true,
+          data: { user: userData, tokens },
+          message: result.message
+        };
+      }
+      
+      return {
+        success: false,
+        message: result.message || 'Registration failed'
+      };
+    } catch (error: any) {
+      console.error('Complete signup error:', error);
+      return {
+        success: false,
+        message: error.message || 'Registration failed'
+      };
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isLoggedIn,
     isLoading,
     login,
     signup,
+    // New signup flow methods
+    sendSignupOTP,
+    verifySignupOTP,
+    completeSignup,
+    // New login OTP flow methods
+    sendLoginOTP,
+    verifyLoginOTP,
     logout,
     updateUser,
     changePassword,

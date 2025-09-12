@@ -35,14 +35,64 @@ class ApiService {
     return headers;
   }
 
+  private getFetchOptions(includeAuth: boolean = true): RequestInit {
+    return {
+      headers: this.getHeaders(includeAuth),
+      credentials: 'include', // This ensures cookies/session data is sent
+    };
+  }
+
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'An error occurred');
+    try {
+      const data = await response.json();
+      
+      if (!response.ok) {
+        // Handle different HTTP error codes with specific messages
+        let errorMessage = data.message || 'An error occurred';
+        
+        switch (response.status) {
+          case 400:
+            errorMessage = data.message || 'Invalid request. Please check your input.';
+            break;
+          case 401:
+            errorMessage = 'Authentication failed. Please check your credentials.';
+            break;
+          case 403:
+            errorMessage = 'Access denied. You don\'t have permission to perform this action.';
+            break;
+          case 404:
+            errorMessage = 'Service not found. Please try again later.';
+            break;
+          case 409:
+            errorMessage = data.message || 'Conflict. The resource already exists.';
+            break;
+          case 422:
+            errorMessage = data.message || 'Invalid data. Please check your input.';
+            break;
+          case 429:
+            errorMessage = 'Too many requests. Please wait and try again.';
+            break;
+          case 500:
+            errorMessage = 'Server error. Please try again later.';
+            break;
+          case 502:
+          case 503:
+          case 504:
+            errorMessage = 'Service unavailable. Please try again later.';
+            break;
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      return data;
+    } catch (error) {
+      // Handle network errors or JSON parsing errors
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw new Error('Network error. Please check your connection and try again.');
     }
-    
-    return data;
   }
 
   setToken(token: string | null) {
@@ -58,28 +108,42 @@ class ApiService {
 
   // Auth API calls
   async login(mobile: string, password: string, rememberMe: boolean = false) {
-    const response = await fetch(`${this.baseUrl}/auth/login`, {
-      method: 'POST',
-      headers: this.getHeaders(false),
-      body: JSON.stringify({ mobile, password, rememberMe }),
-    });
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/login`, {
+        method: 'POST',
+        ...this.getFetchOptions(false),
+        body: JSON.stringify({ mobile, password, rememberMe }),
+        signal: controller.signal,
+      });
 
-    const result = await this.handleResponse<{
-      token: string;
-      type: string;
-      refreshToken: string;
-      id: number;
-      username: string;
-      email: string;
-      role: string;
-    }>(response);
+      const result = await this.handleResponse<{
+        token: string;
+        type: string;
+        refreshToken: string;
+        id: number;
+        name: string;
+        email: string;
+        phone: string;
+        role: string;
+      }>(response);
 
-    // Store token
-    if (result.success && result.data?.token) {
-      this.setToken(result.data.token);
+      // Store token
+      if (result.success && result.data?.token) {
+        this.setToken(result.data.token);
+      }
+
+      return result;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
-
-    return result;
   }
 
   async register(signupData: {
@@ -149,7 +213,185 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  // OTP API calls
+  // New Signup Flow API calls
+  async sendSignupMobileOTP(mobile: string) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/signup/mobile`, {
+        method: 'POST',
+        ...this.getFetchOptions(false),
+        body: JSON.stringify({ mobile }),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse<{
+        nextStep: string;
+        expiresAt: string;
+        message: string;
+        maskedMobile: string;
+      }>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async verifySignupOTP(mobile: string, otpCode: string) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/signup/verify-otp`, {
+        method: 'POST',
+        ...this.getFetchOptions(false),
+        body: JSON.stringify({ mobile, otpCode }),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse<{
+        mobile: string;
+        nextStep: string;
+        message: string;
+      }>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async completeSignup(signupData: {
+    mobile: string;
+    name: string;
+    email: string;
+    password: string;
+    city: string;
+  }) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/signup/complete`, {
+        method: 'POST',
+        ...this.getFetchOptions(false),
+        body: JSON.stringify(signupData),
+        signal: controller.signal,
+      });
+
+      const result = await this.handleResponse<{
+        user: {
+          id: number;
+          name: string;
+          email: string;
+          mobile: string;
+          city: string;
+        };
+        tokens: {
+          token: string;
+          type: string;
+          refreshToken: string;
+          id: number;
+          name: string;
+          email: string;
+          phone: string;
+          role: string;
+        };
+      }>(response);
+
+      // Store token
+      if (result.success && result.data?.tokens?.token) {
+        this.setToken(result.data.tokens.token);
+      }
+
+      return result;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // Login OTP Flow API calls
+  async sendLoginOTP(mobile: string) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/login/send-otp`, {
+        method: 'POST',
+        ...this.getFetchOptions(false),
+        body: JSON.stringify({ mobile }),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse<{
+        maskedMobile: string;
+        message: string;
+        expiresAt: string;
+        nextStep: string;
+      }>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async verifyLoginOTP(mobile: string, otpCode: string) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/auth/login/verify-otp`, {
+        method: 'POST',
+        ...this.getFetchOptions(false),
+        body: JSON.stringify({ mobile, otpCode }),
+        signal: controller.signal,
+      });
+
+      const result = await this.handleResponse<{
+        token: string;
+        type: string;
+        refreshToken: string;
+        id: number;
+        name: string;
+        email: string;
+        phone: string;
+        role: string;
+      }>(response);
+
+      // Store token
+      if (result.success && result.data?.token) {
+        this.setToken(result.data.token);
+      }
+
+      return result;
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // OTP API calls (Legacy - keeping for backward compatibility)
   async generateSignupOTP(email: string) {
     const response = await fetch(`${this.baseUrl}/otp/generate/signup`, {
       method: 'POST',

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import apiService from '@/services/api';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -41,8 +42,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const [otpError, setOtpError] = useState('');
   const [isOtpLoading, setIsOtpLoading] = useState(false);
   const [verifiedMobile, setVerifiedMobile] = useState('');
+  
+  // New signup flow state
+  const [otpExpiresAt, setOtpExpiresAt] = useState<string>('');
+  const [maskedMobile, setMaskedMobile] = useState<string>('');
+  const [signupMessage, setSignupMessage] = useState<string>('');
 
-  const { login, signup } = useAuth();
+  const { login, signup, sendLoginOTP, verifyLoginOTP } = useAuth();
 
   // Close modal on escape key and reset state when opened
   useEffect(() => {
@@ -174,16 +180,25 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
     setIsLoading(true);
     setLoginError('');
+    setSignupMessage('');
     
     try {
-      // Simulate sending OTP to mobile
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the Spring Boot API to send OTP
+      const result = await apiService.sendSignupMobileOTP(formData.mobile);
       
-      setVerifiedMobile(formData.mobile);
-      setSignupStep('otp');
-      console.log(`OTP 666666 sent to mobile ${formData.mobile}`);
-    } catch (error) {
-      setLoginError('Failed to send OTP. Please try again.');
+      if (result.success && result.data) {
+        setVerifiedMobile(formData.mobile);
+        setMaskedMobile(result.data.maskedMobile);
+        setOtpExpiresAt(result.data.expiresAt);
+        setSignupMessage(result.data.message);
+        setSignupStep('otp');
+        console.log('OTP sent successfully:', result.data.message);
+      } else {
+        setLoginError(result.message || 'Failed to send OTP. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Send OTP error:', error);
+      setLoginError(error.message || 'Failed to send OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -198,27 +213,54 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setLoginError('');
     
     try {
-      const signupData: SignupData = {
+      // Call the Spring Boot API to complete signup
+      const signupData = {
+        mobile: verifiedMobile,
         name: formData.name,
         email: formData.email,
-        mobile: verifiedMobile,
-        city: formData.city,
         password: formData.password,
-        confirmPassword: formData.confirmPassword
+        city: formData.city
       };
       
-      const success = await signup(signupData);
-      if (success) {
-        setModalMessage(`Welcome, ${formData.name}! Your account has been created successfully. You can now sign in with your mobile number and password.`);
+      const result = await apiService.completeSignup(signupData);
+      
+      if (result.success && result.data) {
+        // Handle successful registration with tokens
+        const { user, tokens } = result.data;
+        
+        // Create user data in the format expected by AuthContext
+        const userData = {
+          id: user.id.toString(),
+          username: user.mobile,
+          name: user.name,
+          email: user.email,
+          phone: user.mobile,
+          addresses: [],
+          orders: [],
+          paymentMethods: [],
+          invoices: []
+        };
+        
+        // Store user data for immediate login
+        localStorage.setItem('repairapp_user', JSON.stringify(userData));
+        localStorage.setItem('repairapp_authenticated', 'true');
+        localStorage.setItem('repairapp_login_time', Date.now().toString());
+        
+        // Dispatch auth change event
+        window.dispatchEvent(new CustomEvent('authChanged', { 
+          detail: { type: 'login', user: userData } 
+        }));
+        
+        setModalMessage(`Welcome, ${user.name}! Your account has been created successfully and you have been automatically signed in.`);
         setShowSuccessModal(true);
-      }
-    } catch (error) {
-      // Show error modal for signup failures
-      if (error instanceof Error) {
-        setModalMessage(error.message);
       } else {
-        setModalMessage('Registration failed. Please try again.');
+        setModalMessage(result.message || 'Registration failed. Please try again.');
+        setShowErrorModal(true);
       }
+    } catch (error: any) {
+      console.error('Complete signup error:', error);
+      // Show error modal for signup failures
+      setModalMessage(error.message || 'Registration failed. Please try again.');
       setShowErrorModal(true);
     } finally {
       setIsLoading(false);
@@ -287,6 +329,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setOtpError('');
     setVerifiedMobile('');
     setSignupStep('mobile');
+    // Clear new signup flow state
+    setOtpExpiresAt('');
+    setMaskedMobile('');
+    setSignupMessage('');
   };
 
   const handleSuccessModalClose = () => {
@@ -363,20 +409,28 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (enteredOtp !== '666666') {
-      setOtpError('Invalid OTP. Please try again.');
-      return;
-    }
-
     setIsOtpLoading(true);
-    
-    // Simulate verification delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsOtpLoading(false);
-    setSignupStep('details');
     setOtpError('');
-    setOtpCode(['', '', '', '', '', '']);
+    
+    try {
+      // Call the Spring Boot API to verify OTP
+      const result = await apiService.verifySignupOTP(verifiedMobile, enteredOtp);
+      
+      if (result.success && result.data) {
+        setSignupMessage(result.data.message);
+        setSignupStep('details');
+        setOtpError('');
+        setOtpCode(['', '', '', '', '', '']);
+        console.log('OTP verified successfully:', result.data.message);
+      } else {
+        setOtpError(result.message || 'Invalid OTP. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('OTP verification error:', error);
+      setOtpError(error.message || 'OTP verification failed. Please try again.');
+    } finally {
+      setIsOtpLoading(false);
+    }
   };
 
   const handleResendOtp = () => {
@@ -392,6 +446,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setVerifiedMobile('');
     setOtpCode(['', '', '', '', '', '']);
     setOtpError('');
+    // Clear new signup flow state
+    setOtpExpiresAt('');
+    setMaskedMobile('');
+    setSignupMessage('');
   };
 
   const handleLoginMobileSubmit = async () => {
@@ -399,16 +457,25 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
 
     setIsLoading(true);
     setLoginError('');
+    setSignupMessage('');
     
     try {
-      // Simulate sending OTP to mobile
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the Spring Boot API to send login OTP
+      const result = await sendLoginOTP(formData.mobile);
       
-      setVerifiedMobile(formData.mobile);
-      setLoginOtpStep('otp');
-      console.log(`Login OTP 666666 sent to mobile ${formData.mobile}`);
-    } catch (error) {
-      setLoginError('Failed to send OTP. Please try again.');
+      if (result.success && result.data) {
+        setVerifiedMobile(formData.mobile);
+        setMaskedMobile(result.data.maskedMobile);
+        setOtpExpiresAt(result.data.expiresAt);
+        setSignupMessage(result.data.message);
+        setLoginOtpStep('otp');
+        console.log('Login OTP sent successfully:', result.data.message);
+      } else {
+        setLoginError(result.message || 'Failed to send OTP. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Send login OTP error:', error);
+      setLoginError(error.message || 'Failed to send OTP. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -422,47 +489,26 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (enteredOtp !== '666666') {
-      setOtpError('Invalid OTP. Please try again.');
-      return;
-    }
-
     setIsOtpLoading(true);
+    setOtpError('');
     
     try {
-      // Simulate OTP verification and login
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the Spring Boot API to verify login OTP
+      const result = await verifyLoginOTP(verifiedMobile, enteredOtp);
       
-      // For OTP login, we need to check if the user exists in registered users
-      // and then authenticate them directly
-      const registeredUsers = JSON.parse(localStorage.getItem('repairapp_registered_users') || '[]');
-      const foundUser = registeredUsers.find((u: any) => u.mobile === formData.mobile);
-      
-      if (foundUser) {
-        // User exists, login with their actual credentials
-        const success = await login(formData.mobile, foundUser.password);
-        if (success) {
-          onClose();
-          resetForm();
-        } else {
-          setLoginError('Login failed. Please try again.');
-        }
+      if (result.success) {
+        // Login successful - AuthContext has already updated the user state
+        onClose();
+        resetForm();
+        console.log('Login OTP verification successful:', result.message);
       } else {
-        // Check if it's one of the demo accounts
-        const success = await login(formData.mobile, 'otp_login');
-        if (success) {
-          onClose();
-          resetForm();
-        } else {
-          setLoginError('Mobile number not registered. Please sign up first.');
-        }
+        setOtpError(result.message || 'Invalid OTP. Please try again.');
       }
-    } catch (error) {
-      setLoginError('Login failed. Please try again.');
+    } catch (error: any) {
+      console.error('Login OTP verification error:', error);
+      setOtpError(error.message || 'OTP verification failed. Please try again.');
     } finally {
       setIsOtpLoading(false);
-      setOtpError('');
-      setOtpCode(['', '', '', '', '', '']);
     }
   };
 
@@ -473,12 +519,29 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setOtpError('');
   };
 
-  const handleLoginResendOtp = () => {
+  const handleLoginResendOtp = async () => {
     setOtpCode(['', '', '', '', '', '']);
     setOtpError('');
-    // Simulate resending OTP
-    console.log(`Login OTP 666666 resent to mobile ${verifiedMobile}`);
-    alert('OTP resent to your mobile!');
+    setIsLoading(true);
+    
+    try {
+      // Call the Spring Boot API to resend login OTP
+      const result = await sendLoginOTP(verifiedMobile);
+      
+      if (result.success && result.data) {
+        setMaskedMobile(result.data.maskedMobile);
+        setOtpExpiresAt(result.data.expiresAt);
+        setSignupMessage(result.data.message);
+        console.log('Login OTP resent successfully:', result.data.message);
+      } else {
+        setOtpError(result.message || 'Failed to resend OTP. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('Resend login OTP error:', error);
+      setOtpError(error.message || 'Failed to resend OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // OTP verification functions that accept OTP array directly to avoid timing issues
@@ -490,20 +553,28 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (enteredOtp !== '666666') {
-      setOtpError('Invalid OTP. Please try again.');
-      return;
-    }
-
     setIsOtpLoading(true);
-    
-    // Simulate verification delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsOtpLoading(false);
-    setSignupStep('details');
     setOtpError('');
-    setOtpCode(['', '', '', '', '', '']);
+    
+    try {
+      // Call the Spring Boot API to verify OTP
+      const result = await apiService.verifySignupOTP(verifiedMobile, enteredOtp);
+      
+      if (result.success && result.data) {
+        setSignupMessage(result.data.message);
+        setSignupStep('details');
+        setOtpError('');
+        setOtpCode(['', '', '', '', '', '']);
+        console.log('OTP verified successfully (auto):', result.data.message);
+      } else {
+        setOtpError(result.message || 'Invalid OTP. Please try again.');
+      }
+    } catch (error: any) {
+      console.error('OTP verification error (auto):', error);
+      setOtpError(error.message || 'OTP verification failed. Please try again.');
+    } finally {
+      setIsOtpLoading(false);
+    }
   };
 
   const handleLoginOtpVerificationWithOtp = async (otpArray: string[]) => {
@@ -514,47 +585,26 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    if (enteredOtp !== '666666') {
-      setOtpError('Invalid OTP. Please try again.');
-      return;
-    }
-
     setIsOtpLoading(true);
+    setOtpError('');
     
     try {
-      // Simulate OTP verification and login
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call the Spring Boot API to verify login OTP
+      const result = await verifyLoginOTP(verifiedMobile, enteredOtp);
       
-      // For OTP login, we need to check if the user exists in registered users
-      // and then authenticate them directly
-      const registeredUsers = JSON.parse(localStorage.getItem('repairapp_registered_users') || '[]');
-      const foundUser = registeredUsers.find((u: any) => u.mobile === formData.mobile);
-      
-      if (foundUser) {
-        // User exists, login with their actual credentials
-        const success = await login(formData.mobile, foundUser.password);
-        if (success) {
-          onClose();
-          resetForm();
-        } else {
-          setLoginError('Login failed. Please try again.');
-        }
+      if (result.success) {
+        // Login successful - AuthContext has already updated the user state
+        onClose();
+        resetForm();
+        console.log('Login OTP verification successful (auto):', result.message);
       } else {
-        // Check if it's one of the demo accounts
-        const success = await login(formData.mobile, 'otp_login');
-        if (success) {
-          onClose();
-          resetForm();
-        } else {
-          setLoginError('Mobile number not registered. Please sign up first.');
-        }
+        setOtpError(result.message || 'Invalid OTP. Please try again.');
       }
-    } catch (error) {
-      setLoginError('Login failed. Please try again.');
+    } catch (error: any) {
+      console.error('Login OTP verification error (auto):', error);
+      setOtpError(error.message || 'OTP verification failed. Please try again.');
     } finally {
       setIsOtpLoading(false);
-      setOtpError('');
-      setOtpCode(['', '', '', '', '', '']);
     }
   };
 
@@ -745,9 +795,19 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                   <p className="text-gray-600 text-sm mb-2">
                     Enter the 6-digit verification code sent to:
                   </p>
-                  <p className="text-indigo-600 font-semibold text-sm mb-6">
-                    +91 {verifiedMobile}
+                  <p className="text-indigo-600 font-semibold text-sm mb-2">
+                    +91 {maskedMobile || verifiedMobile}
                   </p>
+                  {signupMessage && (
+                    <p className="text-green-600 text-xs mb-4">
+                      {signupMessage}
+                    </p>
+                  )}
+                  {otpExpiresAt && (
+                    <p className="text-gray-500 text-xs mb-6">
+                      OTP expires at: {new Date(otpExpiresAt).toLocaleTimeString()}
+                    </p>
+                  )}
                   
                   {/* OTP Input Fields */}
                   <div className="flex justify-center space-x-2 mb-6">
@@ -774,12 +834,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     </div>
                   )}
                   
-                  {/* Demo OTP Hint */}
-                  <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-xs text-yellow-700 text-center">
-                      <strong>Demo:</strong> Use OTP <strong>666666</strong> for testing
-                    </p>
-                  </div>
+                  {/* Demo OTP Hint - Only show if no actual message from API */}
+                  {!signupMessage && (
+                    <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-xs text-yellow-700 text-center">
+                        <strong>Development:</strong> Use OTP <strong>666666</strong> for testing
+                      </p>
+                    </div>
+                  )}
                   
                   {/* Resend OTP and Back buttons */}
                   <div className="flex flex-col space-y-3">
@@ -1023,9 +1085,19 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                   <p className="text-gray-600 text-sm mb-2">
                     Enter the 6-digit verification code sent to:
                   </p>
-                  <p className="text-indigo-600 font-semibold text-sm mb-6">
-                    +91 {verifiedMobile}
+                  <p className="text-indigo-600 font-semibold text-sm mb-2">
+                    +91 {maskedMobile || verifiedMobile}
                   </p>
+                  {signupMessage && (
+                    <p className="text-green-600 text-xs mb-4">
+                      {signupMessage}
+                    </p>
+                  )}
+                  {otpExpiresAt && (
+                    <p className="text-gray-500 text-xs mb-6">
+                      OTP expires at: {new Date(otpExpiresAt).toLocaleTimeString()}
+                    </p>
+                  )}
                   
                   {/* OTP Input Fields */}
                   <div className="flex justify-center space-x-2 mb-6">
@@ -1052,12 +1124,14 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     </div>
                   )}
                   
-                  {/* Demo OTP Hint */}
-                  <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-xs text-yellow-700 text-center">
-                      <strong>Demo:</strong> Use OTP <strong>666666</strong> for testing
-                    </p>
-                  </div>
+                  {/* Demo OTP Hint - Only show if no actual message from API */}
+                  {!signupMessage && (
+                    <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <p className="text-xs text-yellow-700 text-center">
+                        <strong>Demo:</strong> Use OTP <strong>666666</strong> for testing
+                      </p>
+                    </div>
+                  )}
                   
                   {/* Login with OTP button and Back buttons */}
                   <div className="flex flex-col space-y-3">

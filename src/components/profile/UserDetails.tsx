@@ -4,12 +4,13 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const UserDetails = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, updateUserProfile } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
-    phone: user?.phone || ''
+    phone: user?.phone || '',
+    city: user?.city || ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
@@ -49,6 +50,10 @@ const UserDetails = () => {
       newErrors.phone = 'Phone number is invalid';
     }
 
+    if (!formData.city.trim()) {
+      newErrors.city = 'City is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -59,18 +64,29 @@ const UserDetails = () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setErrors({});
+    setSuccessMessage('');
     
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Call the Spring Boot API to update profile
+      const result = await updateUserProfile({
+        name: formData.name,
+        email: formData.email,
+        city: formData.city
+      });
       
-      // Update user data
-      updateUser(formData);
-      
-      setIsEditing(false);
-      setSuccessMessage('Profile updated successfully!');
-    } catch (error) {
-      setErrors({ general: 'Failed to update profile. Please try again.' });
+      if (result.success) {
+        setIsEditing(false);
+        setSuccessMessage(result.message || 'Profile updated successfully!');
+        
+        // The user state is automatically updated by the AuthContext method
+        console.log('Profile updated successfully:', result.data);
+      } else {
+        setErrors({ general: result.message || 'Failed to update profile. Please try again.' });
+      }
+    } catch (error: any) {
+      console.error('Profile update error:', error);
+      setErrors({ general: error.message || 'Failed to update profile. Please try again.' });
     } finally {
       setIsLoading(false);
     }
@@ -80,7 +96,8 @@ const UserDetails = () => {
     setFormData({
       name: user?.name || '',
       email: user?.email || '',
-      phone: user?.phone || ''
+      phone: user?.phone || '',
+      city: user?.city || ''
     });
     setErrors({});
     setIsEditing(false);
@@ -219,6 +236,34 @@ const UserDetails = () => {
           ) : (
             <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
               <p className="text-gray-900">{user.phone}</p>
+            </div>
+          )}
+        </div>
+
+        {/* City Field */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            City
+          </label>
+          {isEditing ? (
+            <div>
+              <input
+                type="text"
+                name="city"
+                value={formData.city}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors ${
+                  errors.city
+                    ? 'border-red-300 focus:ring-red-200'
+                    : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
+                }`}
+                placeholder="Enter your city"
+              />
+              {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
+            </div>
+          ) : (
+            <div className="px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <p className="text-gray-900">{user.city || 'Not specified'}</p>
             </div>
           )}
         </div>

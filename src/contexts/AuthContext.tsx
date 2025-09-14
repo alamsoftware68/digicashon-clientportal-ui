@@ -15,6 +15,7 @@ const MOCK_USER_DATA = {
   name: 'Alam Khan',
   email: 'alam@example.com',
   phone: '+91 9876500000',
+  city: 'Mumbai',
   addresses: [
     {
       id: '1',
@@ -113,6 +114,7 @@ interface User {
   name: string;
   email: string;
   phone: string;
+  city?: string; // Add city field
   addresses: Address[];
   orders: Order[];
   paymentMethods: PaymentMethod[];
@@ -186,6 +188,8 @@ interface AuthContextType {
   // New login OTP flow methods
   sendLoginOTP: (mobile: string) => Promise<{ success: boolean; data?: any; message: string }>;
   verifyLoginOTP: (mobile: string, otpCode: string) => Promise<{ success: boolean; data?: any; message: string }>;
+  // User profile update method
+  updateUserProfile: (profileData: { name: string; email: string; city: string }) => Promise<{ success: boolean; data?: any; message: string }>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   changePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
@@ -242,16 +246,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const token = localStorage.getItem('auth_token');
         if (token) {
           try {
-            // Verify token with backend
-            const result = await apiService.getCurrentUser();
+            // Verify token and get detailed user data including city field
+            const result = await apiService.getUserProfileDetails();
             if (result.success && result.data) {
-              const userData = result.data as User;
+              // Transform API response to match User interface
+              const userData = {
+                id: result.data.id.toString(),
+                username: result.data.phone,
+                name: result.data.name,
+                email: result.data.email,
+                phone: result.data.phone,
+                city: result.data.city || '',
+                addresses: [],
+                orders: [],
+                paymentMethods: [],
+                invoices: []
+              } as User;
               setUser(userData);
               setIsLoggedIn(true);
               // Also save to localStorage for Header component compatibility
               localStorage.setItem('repairapp_user', JSON.stringify(userData));
               localStorage.setItem('repairapp_authenticated', 'true');
-              console.log('Restored user session from backend token');
+              console.log('Restored user session from backend token with city:', userData.city);
             } else {
               // Token invalid, clear it
               apiService.setToken(null);
@@ -282,33 +298,71 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const result = await apiService.login(mobileOrEmail, password);
         
         if (result.success && result.data) {
-          // Transform API response to user data format
-          const userData = {
-            id: result.data.id.toString(),
-            username: result.data.phone,
-            name: result.data.name,
-            email: result.data.email,
-            phone: result.data.phone,
-            addresses: [],
-            orders: [],
-            paymentMethods: [],
-            invoices: []
-          };
-          
-          setUser(userData);
-          setIsLoggedIn(true);
-          
-          // Persist user data for page refresh compatibility
-          localStorage.setItem('repairapp_user', JSON.stringify(userData));
-          localStorage.setItem('repairapp_authenticated', 'true');
-          localStorage.setItem('repairapp_login_time', Date.now().toString());
-          
-          // Dispatch auth change event
-          window.dispatchEvent(new CustomEvent('authChanged', { 
-            detail: { type: 'login', user: userData } 
-          }));
-          
-          return true;
+          // After successful login, fetch detailed user data including city
+          try {
+            const userDetailsResult = await apiService.getUserProfileDetails();
+            if (userDetailsResult.success && userDetailsResult.data) {
+              // Transform API response to user data format with all details
+              const userData = {
+                id: userDetailsResult.data.id.toString(),
+                username: userDetailsResult.data.phone,
+                name: userDetailsResult.data.name,
+                email: userDetailsResult.data.email,
+                phone: userDetailsResult.data.phone,
+                city: userDetailsResult.data.city || '',
+                addresses: [],
+                orders: [],
+                paymentMethods: [],
+                invoices: []
+              };
+              
+              setUser(userData);
+              setIsLoggedIn(true);
+              
+              // Persist user data for page refresh compatibility
+              localStorage.setItem('repairapp_user', JSON.stringify(userData));
+              localStorage.setItem('repairapp_authenticated', 'true');
+              localStorage.setItem('repairapp_login_time', Date.now().toString());
+              
+              // Dispatch auth change event
+              window.dispatchEvent(new CustomEvent('authChanged', { 
+                detail: { type: 'login', user: userData } 
+              }));
+              
+              console.log('Login successful with city data:', userData.city);
+              return true;
+            }
+          } catch (userDetailsError) {
+            console.warn('Failed to fetch user details after login, using basic data:', userDetailsError);
+            // Fallback to basic user data from login response
+            const userData = {
+              id: result.data.id.toString(),
+              username: result.data.phone,
+              name: result.data.name,
+              email: result.data.email,
+              phone: result.data.phone,
+              city: '',
+              addresses: [],
+              orders: [],
+              paymentMethods: [],
+              invoices: []
+            };
+            
+            setUser(userData);
+            setIsLoggedIn(true);
+            
+            // Persist user data for page refresh compatibility
+            localStorage.setItem('repairapp_user', JSON.stringify(userData));
+            localStorage.setItem('repairapp_authenticated', 'true');
+            localStorage.setItem('repairapp_login_time', Date.now().toString());
+            
+            // Dispatch auth change event
+            window.dispatchEvent(new CustomEvent('authChanged', { 
+              detail: { type: 'login', user: userData } 
+            }));
+            
+            return true;
+          }
         }
       } catch (backendError) {
         console.log('Backend login failed, trying fallback:', backendError);
@@ -326,6 +380,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: 'Demo User',
           email: 'user@example.com',
           phone: '+91 9876543210',
+          city: 'Demo City',
           addresses: [],
           orders: [],
           paymentMethods: [],
@@ -363,6 +418,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: localUser.name,
           email: localUser.email,
           phone: `+91 ${localUser.mobile}`,
+          city: localUser.city,
           addresses: [],
           orders: [],
           paymentMethods: [],
@@ -501,6 +557,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Save to localStorage
     localStorage.setItem('repairapp_user', JSON.stringify(updatedUser));
+  };
+
+  // User profile update method
+  const updateUserProfile = async (profileData: { name: string; email: string; city: string }) => {
+    try {
+      const result = await apiService.updateUserProfile(profileData);
+      
+      if (result.success && result.data) {
+        // Update the user state with the API response data
+        const updatedUserData = {
+          ...user,
+          name: result.data.name,
+          email: result.data.email,
+          phone: result.data.phone,
+          city: result.data.city
+        };
+        
+        setUser(updatedUserData);
+        
+        // Persist updated user data
+        localStorage.setItem('repairapp_user', JSON.stringify(updatedUserData));
+        
+        // Dispatch auth change event for UI synchronization
+        window.dispatchEvent(new CustomEvent('authChanged', { 
+          detail: { type: 'profileUpdate', user: updatedUserData } 
+        }));
+        
+        return {
+          success: true,
+          data: result.data,
+          message: result.message
+        };
+      }
+      
+      return {
+        success: false,
+        message: result.message || 'Failed to update profile'
+      };
+    } catch (error: any) {
+      console.error('Update profile error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to update profile'
+      };
+    }
   };
 
   const changePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
@@ -678,13 +779,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const result = await apiService.verifyLoginOTP(mobile, otpCode);
       
       if (result.success && result.data) {
-        // Transform API response to user data format
+        // After successful OTP login, fetch detailed user data including city
+        try {
+          const userDetailsResult = await apiService.getUserProfileDetails();
+          if (userDetailsResult.success && userDetailsResult.data) {
+            // Transform API response to user data format with all details
+            const userData = {
+              id: userDetailsResult.data.id.toString(),
+              username: userDetailsResult.data.phone,
+              name: userDetailsResult.data.name,
+              email: userDetailsResult.data.email,
+              phone: userDetailsResult.data.phone,
+              city: userDetailsResult.data.city || '',
+              addresses: [],
+              orders: [],
+              paymentMethods: [],
+              invoices: []
+            };
+            
+            // Update context state
+            setUser(userData);
+            setIsLoggedIn(true);
+            
+            // Persist user data
+            localStorage.setItem('repairapp_user', JSON.stringify(userData));
+            localStorage.setItem('repairapp_authenticated', 'true');
+            localStorage.setItem('repairapp_login_time', Date.now().toString());
+            
+            // Dispatch auth change event
+            window.dispatchEvent(new CustomEvent('authChanged', { 
+              detail: { type: 'login', user: userData } 
+            }));
+            
+            console.log('OTP login successful with city data:', userData.city);
+            return {
+              success: true,
+              data: { user: userData, tokens: result.data },
+              message: result.message
+            };
+          }
+        } catch (userDetailsError) {
+          console.warn('Failed to fetch user details after OTP login, using basic data:', userDetailsError);
+        }
+        
+        // Fallback to basic user data from OTP login response
         const userData = {
           id: result.data.id.toString(),
           username: result.data.phone,
           name: result.data.name,
           email: result.data.email,
           phone: result.data.phone,
+          city: '',
           addresses: [],
           orders: [],
           paymentMethods: [],
@@ -750,13 +895,57 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Handle successful registration with tokens
         const { user: apiUser, tokens } = result.data;
         
-        // Create user data in the format expected by AuthContext
+        // After successful registration, fetch detailed user data including city
+        try {
+          const userDetailsResult = await apiService.getUserProfileDetails();
+          if (userDetailsResult.success && userDetailsResult.data) {
+            // Create user data from detailed API response
+            const userData = {
+              id: userDetailsResult.data.id.toString(),
+              username: userDetailsResult.data.phone,
+              name: userDetailsResult.data.name,
+              email: userDetailsResult.data.email,
+              phone: userDetailsResult.data.phone,
+              city: userDetailsResult.data.city || '',
+              addresses: [],
+              orders: [],
+              paymentMethods: [],
+              invoices: []
+            };
+            
+            // Update context state
+            setUser(userData);
+            setIsLoggedIn(true);
+            
+            // Persist user data
+            localStorage.setItem('repairapp_user', JSON.stringify(userData));
+            localStorage.setItem('repairapp_authenticated', 'true');
+            localStorage.setItem('repairapp_login_time', Date.now().toString());
+            
+            // Dispatch auth change event
+            window.dispatchEvent(new CustomEvent('authChanged', { 
+              detail: { type: 'login', user: userData } 
+            }));
+            
+            console.log('Signup successful with city data:', userData.city);
+            return {
+              success: true,
+              data: { user: userData, tokens },
+              message: result.message
+            };
+          }
+        } catch (userDetailsError) {
+          console.warn('Failed to fetch user details after signup, using registration data:', userDetailsError);
+        }
+        
+        // Fallback to data from registration response
         const userData = {
           id: apiUser.id.toString(),
           username: apiUser.mobile,
           name: apiUser.name,
           email: apiUser.email,
           phone: apiUser.mobile,
+          city: apiUser.city || '',
           addresses: [],
           orders: [],
           paymentMethods: [],
@@ -810,6 +999,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // New login OTP flow methods
     sendLoginOTP,
     verifyLoginOTP,
+    // User profile update method
+    updateUserProfile,
     logout,
     updateUser,
     changePassword,

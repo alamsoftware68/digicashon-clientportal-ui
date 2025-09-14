@@ -422,6 +422,117 @@ class ApiService {
     return this.handleResponse(response);
   }
 
+  // Service Categories API calls
+  async getServiceCategories() {
+    const response = await fetch(`${this.baseUrl}/service-categories`, {
+      method: 'GET',
+      ...this.getFetchOptions(false), // No auth required for service categories
+    });
+
+    return this.handleResponse<{
+      totalCategories: number;
+      totalServices: number;
+      availableCategories: string[];
+      categoryGroups: {
+        categoryId: number;
+        categoryName: string;
+        categoryDescription: string;
+        categoryIcon: string;
+        displayOrder: number;
+        serviceCount: number;
+        bulletPoint1: string;
+        bulletPoint2: string;
+        services: {
+          id: number;
+          serviceTitle: string;
+          serviceDescription: string;
+          bulletPoints: string[];
+          serviceIcon: string;
+          price: number;
+          displayOrder: number;
+          isActive: boolean;
+          createdAt: string;
+          updatedAt: string;
+        }[];
+      }[];
+    }>(response);
+  }
+
+  // User Profile API calls
+  async getUserProfileDetails() {
+    const response = await fetch(`${this.baseUrl}/users/profile/details`, {
+      method: 'GET',
+      ...this.getFetchOptions(true),
+    });
+
+    return this.handleResponse<{
+      id: number;
+      name: string;
+      email: string;
+      city: string;
+      phone: string;
+      role: string;
+      isActive: boolean;
+      phoneVerified: boolean;
+    }>(response);
+  }
+
+  async updateUserProfile(profileData: {
+    name: string;
+    email: string;
+    city: string;
+  }) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+    
+    try {
+      // Try PUT method first
+      let response = await fetch(`${this.baseUrl}/users/profile/details`, {
+        method: 'PUT',
+        ...this.getFetchOptions(true), // Include authentication
+        body: JSON.stringify(profileData),
+        signal: controller.signal,
+      });
+
+      // If PUT method is not supported, try PATCH
+      if (!response.ok && response.status === 405) {
+        console.log('PUT method not supported, trying PATCH...');
+        response = await fetch(`${this.baseUrl}/users/profile/details`, {
+          method: 'PATCH',
+          ...this.getFetchOptions(true), // Include authentication
+          body: JSON.stringify(profileData),
+          signal: controller.signal,
+        });
+      }
+
+      return this.handleResponse<{
+        id: number;
+        name: string;
+        email: string;
+        city: string;
+        phone: string;
+        role: string;
+        isActive: boolean;
+        phoneVerified: boolean;
+      }>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      
+      // Enhanced error logging for debugging
+      console.error('Profile update error:', {
+        error: error.message,
+        endpoint: `${this.baseUrl}/users/profile/details`,
+        data: profileData
+      });
+      
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   // Utility methods
   async checkEmailAvailability(email: string) {
     const response = await fetch(`${this.baseUrl}/auth/check-email?email=${encodeURIComponent(email)}`, {

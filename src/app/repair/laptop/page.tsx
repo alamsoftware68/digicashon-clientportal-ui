@@ -10,8 +10,11 @@ import ViewDetailsButton from '@/components/ViewDetailsButton';
 import LoginModal from '@/components/LoginModal';
 import AddressSelectionModal from '@/components/AddressSelectionModal';
 import { useAuth, Address } from '@/contexts/AuthContext';
+import apiService from '@/services/api';
+import { UIServiceCategory, UIServiceItem, transformServiceCategories } from '@/types/service-categories';
 
-interface ServiceItem {
+// Legacy interfaces for backward compatibility
+interface ServiceItem extends UIServiceItem {
   name: string;
   price: number;
   description?: string;
@@ -20,7 +23,7 @@ interface ServiceItem {
   badge?: string;
 }
 
-interface ServiceCategory {
+interface ServiceCategory extends UIServiceCategory {
   id: string;
   name: string;
   icon: string;
@@ -35,6 +38,46 @@ const LaptopRepairPage = () => {
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
   const [cart, setCart] = useState<Array<{ name: string; price: number }>>([]);
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  // Load service categories from API
+  useEffect(() => {
+    const fetchServiceCategories = async () => {
+      try {
+        setIsLoadingCategories(true);
+        setCategoriesError(null);
+        console.log('[Categories] Fetching service categories from API...');
+        
+        const response = await apiService.getServiceCategories();
+        
+        if (response.success && response.data) {
+          const transformedCategories = transformServiceCategories(response.data);
+          setServiceCategories(transformedCategories);
+          
+          // Set first category as active by default
+          if (transformedCategories.length > 0) {
+            setActiveTab(transformedCategories[0].id);
+          }
+          
+          console.log('[Categories] Successfully loaded', transformedCategories.length, 'categories');
+        } else {
+          throw new Error(response.message || 'Failed to fetch service categories');
+        }
+      } catch (error) {
+        console.error('[Categories] Error fetching service categories:', error);
+        setCategoriesError(error instanceof Error ? error.message : 'Failed to load service categories');
+        
+        // Fallback to empty array to prevent app crash
+        setServiceCategories([]);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+    
+    fetchServiceCategories();
+  }, []);
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -68,225 +111,6 @@ const LaptopRepairPage = () => {
   const [lastOrderAmount, setLastOrderAmount] = useState<number>(0);
   const [isAddressSelectionOpen, setIsAddressSelectionOpen] = useState<boolean>(false);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-
-  // Service categories data with attractive visuals and features
-  const serviceCategories: ServiceCategory[] = [
-    {
-      id: 'home-visit',
-      name: 'Home Visit',
-      icon: '🏠',
-      bulletPoints: [
-        'Certified technicians at your doorstep',
-        'Enhances speed, cooling & battery efficiency'
-      ],
-      services: [
-        { 
-          name: 'Windows Laptop', 
-          price: 499, 
-          description: 'Complete diagnosis and service at your home with certified technicians',
-          image: '/images/laptop-repair-1.jpg',
-          badge: 'Popular',
-          features: ['Free Diagnosis', 'Same Day Service', '90 Days Warranty', 'Certified Technicians']
-        },
-        { 
-          name: 'Desktop', 
-          price: 399, 
-          description: 'Professional desktop service and maintenance at your location',
-          image: '/images/laptop-repair-2.jpg',
-          features: ['Hardware Check', 'Cleaning Service', '60 Days Warranty', 'Data Protection']
-        },
-        { 
-          name: 'MacBook', 
-          price: 999, 
-          description: 'Specialized MacBook service and repair by Apple certified experts',
-          image: '/images/laptop-repair-3.jpg',
-          badge: 'Premium',
-          features: ['Apple Certified', 'Original Parts', '180 Days Warranty', 'Data Recovery']
-        }
-      ]
-    },
-    {
-      id: 'repair',
-      name: 'Repair',
-      icon: '🔧',
-      bulletPoints: [
-        'Expert diagnosis and fixing',
-        'High-quality parts and service'
-      ],
-      services: [
-        { 
-          name: 'Software Issue', 
-          price: 799, 
-          description: 'OS problems, virus removal, software conflicts and system optimization',
-          image: '/images/laptop-repair-4.jpg',
-          features: ['Virus Removal', 'OS Repair', 'Software Fix', 'Performance Boost']
-        },
-        { 
-          name: 'Charging Issue', 
-          price: 899, 
-          description: 'Battery replacement, charging port repair and power management',
-          image: '/images/Laptop-service.jpg',
-          badge: 'Quick Fix',
-          features: ['Battery Test', 'Port Repair', 'Power Optimization', 'Genuine Parts']
-        },
-        { 
-          name: 'Display Issue', 
-          price: 1499, 
-          description: 'Screen replacement, display problems and LCD/LED repair',
-          image: '/images/laptop-repair-1.jpg',
-          features: ['Screen Replacement', 'Color Calibration', 'Brightness Fix', 'HD Quality']
-        },
-        { 
-          name: 'Keyboard Issue', 
-          price: 699, 
-          description: 'Key replacement, keyboard repair and functionality restoration',
-          image: '/images/laptop-repair-2.jpg',
-          features: ['Key Replacement', 'Backlight Fix', 'Deep Cleaning', 'Full Testing']
-        },
-        { 
-          name: 'Overheating Issue', 
-          price: 899, 
-          description: 'Fan cleaning, thermal management and cooling system optimization',
-          image: '/images/laptop-repair-3.jpg',
-          features: ['Fan Cleaning', 'Thermal Paste', 'Vent Cleaning', 'Temperature Monitor']
-        },
-        { 
-          name: 'Physical Damage', 
-          price: 1999, 
-          description: 'Body damage repair, structural fixes and cosmetic restoration',
-          image: '/images/laptop-repair-4.jpg',
-          badge: 'Expert Care',
-          features: ['Body Repair', 'Hinge Fix', 'Cosmetic Restore', 'Structural Support']
-        },
-        { 
-          name: 'Port Issue', 
-          price: 699, 
-          description: 'USB, HDMI, audio and other port repairs with genuine components',
-          image: '/images/Laptop-service.jpg',
-          features: ['Port Replacement', 'Connection Test', 'Genuine Parts', 'Full Functionality']
-        },
-        { 
-          name: 'Slow Performance', 
-          price: 799, 
-          description: 'System optimization, speed improvement and performance enhancement',
-          image: '/images/laptop-repair-1.jpg',
-          badge: 'Speed Boost',
-          features: ['System Cleanup', 'Registry Fix', 'Startup Optimization', 'RAM Upgrade']
-        },
-        { 
-          name: 'Speaker Issue', 
-          price: 699, 
-          description: 'Audio problems, speaker replacement and sound system repair',
-          image: '/images/laptop-repair-2.jpg',
-          features: ['Speaker Fix', 'Audio Drivers', 'Sound Quality', 'Volume Control']
-        },
-        { 
-          name: 'Touchpad Issue', 
-          price: 599, 
-          description: 'Trackpad repair, sensitivity adjustment and functionality restoration',
-          image: '/images/laptop-repair-3.jpg',
-          features: ['Touchpad Repair', 'Sensitivity Fix', 'Gesture Control', 'Driver Update']
-        },
-        { 
-          name: 'Unknown Issue', 
-          price: 1299, 
-          description: 'Complete diagnostic service to identify and resolve any laptop problem',
-          image: '/images/laptop-repair-4.jpg',
-          badge: 'Full Diagnostic',
-          features: ['Complete Diagnosis', 'Problem Identification', 'Expert Solution', 'Detailed Report']
-        }
-      ]
-    },
-    {
-      id: 'laptop-desktop-service',
-      name: 'Laptop/Desktop Service',
-      icon: '💻',
-      bulletPoints: [
-        'Comprehensive hardware and software support',
-        'Boost performance with professional servicing'
-      ],
-      services: [
-        { 
-          name: 'Basic Service', 
-          price: 699, 
-          description: 'Essential cleaning and basic maintenance for optimal performance',
-          image: '/images/Laptop-service.jpg',
-          features: ['External Cleaning', 'Basic Maintenance', 'Software Update', '30 Days Support']
-        },
-        { 
-          name: 'Advanced Service', 
-          price: 1299, 
-          description: 'Deep cleaning, performance optimization and comprehensive maintenance',
-          image: '/images/laptop-repair-1.jpg',
-          badge: 'Recommended',
-          features: ['Deep Cleaning', 'Performance Tuning', 'System Optimization', '90 Days Warranty']
-        },
-        { 
-          name: 'Gaming Laptop Service', 
-          price: 1599, 
-          description: 'Specialized maintenance for gaming laptops with performance enhancement',
-          image: '/images/laptop-repair-2.jpg',
-          badge: 'Gaming Pro',
-          features: ['GPU Optimization', 'Cooling Enhancement', 'Performance Mode', 'Gaming Support']
-        },
-        { 
-          name: 'Business Laptop Service', 
-          price: 999, 
-          description: 'Professional laptop service package for business and enterprise needs',
-          image: '/images/laptop-repair-3.jpg',
-          features: ['Security Setup', 'Data Protection', 'Professional Tools', 'Business Support']
-        }
-      ]
-    },
-    {
-      id: 'add-on-service',
-      name: 'Add-On Service',
-      icon: '➕',
-      bulletPoints: [
-        'Extra services for enhanced device care',
-        'Customize repairs with additional options'
-      ],
-      services: [
-        { 
-          name: 'Data Recovery', 
-          price: 1999, 
-          description: 'Professional data recovery from damaged or corrupted storage devices',
-          image: '/images/laptop-repair-4.jpg',
-          badge: 'Data Safe',
-          features: ['File Recovery', 'Drive Repair', '99% Success Rate', 'Secure Process']
-        },
-        { 
-          name: 'Software Installation', 
-          price: 299, 
-          description: 'Operating system installation, software setup and driver configuration',
-          image: '/images/Laptop-service.jpg',
-          features: ['OS Installation', 'Driver Setup', 'Software Config', 'License Activation']
-        },
-        { 
-          name: 'Hardware Upgrade', 
-          price: 799, 
-          description: 'RAM, SSD, and other component upgrades to boost performance',
-          image: '/images/laptop-repair-1.jpg',
-          badge: 'Performance+',
-          features: ['RAM Upgrade', 'SSD Installation', 'Component Replacement', 'Compatibility Check']
-        },
-        { 
-          name: 'Antivirus Setup', 
-          price: 399, 
-          description: 'Security software installation, configuration and system protection',
-          image: '/images/laptop-repair-2.jpg',
-          features: ['Antivirus Install', 'Security Config', 'Threat Removal', 'Protection Setup']
-        },
-        { 
-          name: 'System Backup', 
-          price: 499, 
-          description: 'Complete system backup and restore setup for data protection',
-          image: '/images/laptop-repair-3.jpg',
-          features: ['Full Backup', 'Restore Setup', 'Cloud Integration', 'Automated Schedule']
-        }
-      ]
-    }
-  ];
 
   const handleCategoryClick = (category: ServiceCategory) => {
     setSelectedCategory(category);
@@ -399,6 +223,55 @@ const LaptopRepairPage = () => {
           
           {/* Service Categories - Main Content */}
           <div className="lg:col-span-3">
+            
+            {/* Loading State */}
+            {isLoadingCategories && (
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+                <div className="text-center">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-spin">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Loading Services...</h3>
+                  <p className="text-gray-500">Please wait while we fetch the latest service categories</p>
+                  
+                  {/* Loading skeleton */}
+                  <div className="mt-8 space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="bg-gray-100 rounded-lg h-20 animate-pulse"></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Error State */}
+            {categoriesError && !isLoadingCategories && (
+              <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-8">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-red-800 mb-2">Failed to Load Services</h3>
+                  <p className="text-red-600 mb-6">{categoriesError}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-red-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Service Categories Content - Only show when loaded and no error */}
+            {!isLoadingCategories && !categoriesError && serviceCategories.length > 0 && (
+            <>
             {/* Enhanced Tab Navigation with Modern Design */}
             <div className="bg-gradient-to-r from-gray-50 via-white to-gray-50 rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
               {/* Tab Header with Gradient */}
@@ -562,6 +435,8 @@ const LaptopRepairPage = () => {
                 </div>
               </div>
             </div>
+            </>
+            )}
           </div>
 
           {/* Right Sidebar - Enhanced Cart */}

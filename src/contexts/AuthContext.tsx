@@ -566,8 +566,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (result.success && result.data) {
         // Update the user state with the API response data
-        const updatedUserData = {
-          ...user,
+        const updatedUserData: User = {
+          ...user!,
           name: result.data.name,
           email: result.data.email,
           phone: result.data.phone,

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Address API Test</title>
+</head>
+<body>
+    <h1>Address API Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testAddressAPI() {
+            const results = document.getElementById('results');
+            
+            // Test data that should meet all backend constraints
+            const testAddressData = {
+                type: "Home",  // <= 50 chars
+                address: "123 Main Street, Apt 4B",  // <= 255 chars
+                city: "Mumbai",  // <= 100 chars
+                state: "Maharashtra",  // <= 100 chars
+                zipCode: "400001",  // exactly 6 digits
+                isDefault: true
+            };
+            
+            results.innerHTML = '<h2>Test Address Data:</h2>';
+            results.innerHTML += '<pre>' + JSON.stringify(testAddressData, null, 2) + '</pre>';
+            
+            // Test validation
+            const zipCodeRegex = /^\d{6}$/;
+            const isValidZip = zipCodeRegex.test(testAddressData.zipCode);
+            
+            results.innerHTML += '<h2>Validation Results:</h2>';
+            results.innerHTML += '<p>ZIP Code Valid: ' + isValidZip + '</p>';
+            results.innerHTML += '<p>Type Length: ' + testAddressData.type.length + ' (max 50)</p>';
+            results.innerHTML += '<p>Address Length: ' + testAddressData.address.length + ' (max 255)</p>';
+            results.innerHTML += '<p>City Length: ' + testAddressData.city.length + ' (max 100)</p>';
+            results.innerHTML += '<p>State Length: ' + testAddressData.state.length + ' (max 100)</p>';
+            
+            // Test API call (without auth for now)
+            try {
+                const response = await fetch('http://localhost:8080/api/profile/addresses', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // No Authorization header for testing
+                    },
+                    body: JSON.stringify(testAddressData),
+                });
+                
+                const responseText = await response.text();
+                
+                results.innerHTML += '<h2>API Response:</h2>';
+                results.innerHTML += '<p>Status: ' + response.status + '</p>';
+                results.innerHTML += '<p>Status Text: ' + response.statusText + '</p>';
+                results.innerHTML += '<pre>' + responseText + '</pre>';
+                
+            } catch (error) {
+                results.innerHTML += '<h2>Error:</h2>';
+                results.innerHTML += '<p>' + error.message + '</p>';
+            }
+        }
+        
+        // Run test on page load
+        window.onload = testAddressAPI;
+    </script>
+</body>
+</html>

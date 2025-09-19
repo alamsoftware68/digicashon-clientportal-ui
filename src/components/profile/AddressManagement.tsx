@@ -81,12 +81,12 @@ const AddressManagement = () => {
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
-    // Validate address type (must be Home, Office, or Others)
-    const validTypes = ['Home', 'Office', 'Others'];
+    // Validate address type (must be Home, Work, or Other)
+    const validTypes = ['Home', 'Work', 'Other'];
     if (!formData.type.trim()) {
       newErrors.type = 'Address type is required';
     } else if (!validTypes.includes(formData.type.trim())) {
-      newErrors.type = 'Address type must be Home, Office, or Others';
+      newErrors.type = 'Address type must be Home, Work, or Other';
     }
     
     // Validate address (required, max 255 chars)
@@ -518,7 +518,7 @@ const AddressManagement = () => {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Address Type *
-                    <span className="text-xs text-gray-500 font-normal ml-2">(Select Home, Office, or Others)</span>
+                    <span className="text-xs text-gray-500 font-normal ml-2">(Select Home, Work, or Other)</span>
                   </label>
                   <select
                     name="type"
@@ -532,8 +532,8 @@ const AddressManagement = () => {
                   >
                     <option value="">Select address type</option>
                     <option value="Home">🏠 Home</option>
-                    <option value="Office">🏢 Office</option>
-                    <option value="Others">📍 Others</option>
+                    <option value="Work">🏢 Work</option>
+                    <option value="Other">📍 Other</option>
                   </select>
                   {errors.type && (
                     <div className="flex items-center mt-2">

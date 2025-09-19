@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth, Address } from '../contexts/AuthContext';
 
 interface AddressSelectionModalProps {
@@ -18,6 +18,7 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
+  const [addressesInitialized, setAddressesInitialized] = useState(false);
   const [newAddress, setNewAddress] = useState({
     type: 'Home',
     address: '',
@@ -27,40 +28,78 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
     isDefault: false
   });
 
-  // Fetch addresses and set default when modal opens
+  // Reset state when modal opens
   useEffect(() => {
     if (isOpen && user) {
-      // Fetch latest addresses from API
+      console.log('[AddressModal] Modal opened, resetting state');
+      setSelectedAddressId('');
+      setShowAddForm(false);
+      setAddressesInitialized(false);
+    } else if (!isOpen) {
+      // Reset when modal closes
+      setSelectedAddressId('');
+      setShowAddForm(false);
+      setAddressesInitialized(false);
+    }
+  }, [isOpen, user?.id]); // Only depend on isOpen and user ID, not the full user object
+  
+  // Fetch addresses when modal opens (separate effect to avoid loop)
+  useEffect(() => {
+    if (isOpen && user && !addressesInitialized) {
+      console.log('[AddressModal] Fetching addresses');
       fetchUserAddresses().then(() => {
-        console.log('Addresses refreshed');
+        console.log('[AddressModal] Addresses fetched successfully');
+        setAddressesInitialized(true);
       }).catch(error => {
-        console.error('Failed to fetch addresses:', error);
+        console.error('[AddressModal] Failed to fetch addresses:', error);
+        setAddressesInitialized(true); // Set to true even on error to prevent infinite loop
       });
     }
-  }, [isOpen, user, fetchUserAddresses]);
+  }, [isOpen, user?.id, addressesInitialized, fetchUserAddresses]);
   
-  // Set default address as selected when addresses are loaded
+  // Set default address as selected when addresses are loaded (only once)
   useEffect(() => {
-    if (isOpen && user && user.addresses.length > 0) {
+    if (isOpen && user && user.addresses.length > 0 && addressesInitialized && !selectedAddressId) {
       const defaultAddress = user.addresses.find(addr => addr.isDefault);
       if (defaultAddress) {
+        console.log('[AddressModal] Setting default address as selected:', defaultAddress.id);
         setSelectedAddressId(defaultAddress.id);
       } else {
+        console.log('[AddressModal] Setting first address as selected:', user.addresses[0].id);
         setSelectedAddressId(user.addresses[0].id);
       }
     }
-  }, [user?.addresses, isOpen]);
+  }, [user?.addresses, addressesInitialized, selectedAddressId, isOpen]);
+
+  // Memoized address selection handler to prevent re-renders
+  const handleAddressSelect = useCallback((addressId: string) => {
+    console.log('[AddressModal] Selecting address:', addressId);
+    setSelectedAddressId(addressId);
+  }, []);
+
+  // Memoized confirmation handler
+  const handleConfirmSelection = useCallback(() => {
+    console.log('[AddressModal] Confirming address selection:', selectedAddressId);
+    console.log('[AddressModal] Available addresses:', user?.addresses?.map(a => ({id: a.id, type: a.type})));
+    
+    if (!user?.addresses || user.addresses.length === 0) {
+      alert('No addresses available.');
+      return;
+    }
+    
+    const selectedAddress = user.addresses.find(addr => addr.id === selectedAddressId);
+    if (selectedAddress) {
+      console.log('[AddressModal] Found selected address:', selectedAddress);
+      onSelectAddress(selectedAddress);
+      onClose();
+    } else {
+      console.error('[AddressModal] No address found for ID:', selectedAddressId);
+      alert('Please select an address before continuing.');
+    }
+  }, [selectedAddressId, user?.addresses, onSelectAddress, onClose]);
 
   // Early return after all hooks are called
   if (!isOpen || !user) return null;
-
-  const handleConfirmSelection = () => {
-    const selectedAddress = user.addresses.find(addr => addr.id === selectedAddressId);
-    if (selectedAddress) {
-      onSelectAddress(selectedAddress);
-      onClose();
-    }
-  };
 
   const handleAddAddress = async () => {
     // Validate form
@@ -98,20 +137,9 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
       });
       setShowAddForm(false);
       
-      // Wait a moment for addresses to refresh, then select the newest one
-      setTimeout(() => {
-        if (user && user.addresses.length > 0) {
-          // Sort by creation date if available, or use the last one
-          const sortedAddresses = [...user.addresses].sort((a, b) => {
-            if (a.createdAt && b.createdAt) {
-              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-            }
-            return 0;
-          });
-          const newestAddress = sortedAddresses[0] || user.addresses[user.addresses.length - 1];
-          setSelectedAddressId(newestAddress.id);
-        }
-      }, 500);
+      // Manually refresh addresses and reset initialization flag to trigger re-fetch
+      console.log('[AddressModal] Address added successfully, refreshing addresses');
+      setAddressesInitialized(false);
       
       alert('Address added successfully!');
     } catch (error: any) {
@@ -193,15 +221,18 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
                     </button>
                   </div>
                   
-                  {user.addresses.map((address) => (
+                  {user.addresses.map((address) => {
+                    const isSelected = selectedAddressId === address.id;
+                    
+                    return (
                     <div
                       key={address.id}
                       className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                        selectedAddressId === address.id
+                        isSelected
                           ? 'border-blue-500 bg-blue-50 shadow-md'
                           : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                       }`}
-                      onClick={() => setSelectedAddressId(address.id)}
+                      onClick={() => handleAddressSelect(address.id)}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start space-x-3">
@@ -210,8 +241,9 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
                               type="radio"
                               name="selectedAddress"
                               value={address.id}
-                              checked={selectedAddressId === address.id}
-                              onChange={() => setSelectedAddressId(address.id)}
+                              checked={isSelected}
+                              onChange={() => handleAddressSelect(address.id)}
+                              onClick={(e) => e.stopPropagation()} // Prevent double firing
                               className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                             />
                           </div>
@@ -231,7 +263,7 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
                           </div>
                         </div>
                         
-                        {selectedAddressId === address.id && (
+                        {isSelected && (
                           <div className="text-blue-500">
                             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -240,7 +272,8 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
                         )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </>
               ) : (
                 <div className="bg-gray-50 rounded-lg p-6">

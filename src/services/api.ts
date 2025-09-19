@@ -47,6 +47,14 @@ class ApiService {
       const data = await response.json();
       
       if (!response.ok) {
+        // Log the full error response for debugging
+        console.error('[API] Error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          data: data
+        });
+        
         // Handle different HTTP error codes with specific messages
         let errorMessage = data.message || 'An error occurred';
         
@@ -455,6 +463,123 @@ class ApiService {
           updatedAt: string;
         }[];
       }[];
+    }>(response);
+  }
+
+  // Address Management API calls
+  async getUserAddresses() {
+    const response = await fetch(`${this.baseUrl}/profile/addresses`, {
+      method: 'GET',
+      ...this.getFetchOptions(true),
+    });
+
+    return this.handleResponse<{
+      id: number;
+      type: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      isDefault: boolean;
+      createdAt: string;
+      updatedAt: string;
+      fullAddress: string;
+    }[]>(response);
+  }
+
+  async addUserAddress(addressData: {
+    type: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    isDefault?: boolean;
+  }) {
+    console.log('[API] Adding address - URL:', `${this.baseUrl}/profile/addresses`);
+    console.log('[API] Adding address - Request body:', JSON.stringify(addressData, null, 2));
+    const response = await fetch(`${this.baseUrl}/profile/addresses`, {
+      method: 'POST',
+      ...this.getFetchOptions(true),
+      body: JSON.stringify(addressData),
+    });
+    console.log('[API] Add address response status:', response.status);
+    console.log('[API] Add address response headers:', Object.fromEntries(response.headers.entries()));
+
+    return this.handleResponse<{
+      id: number;
+      type: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      isDefault: boolean;
+      createdAt: string;
+      updatedAt: string;
+      fullAddress: string;
+    }>(response);
+  }
+
+  async updateUserAddress(addressId: number, addressData: {
+    type: string;
+    address: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    isDefault?: boolean;
+  }) {
+    console.log('[API] Updating address - URL:', `${this.baseUrl}/profile/addresses/${addressId}`);
+    console.log('[API] Updating address - Request body:', JSON.stringify(addressData, null, 2));
+    const response = await fetch(`${this.baseUrl}/profile/addresses/${addressId}`, {
+      method: 'PUT',
+      ...this.getFetchOptions(true),
+      body: JSON.stringify(addressData),
+    });
+    console.log('[API] Update address response status:', response.status);
+    console.log('[API] Update address response headers:', Object.fromEntries(response.headers.entries()));
+
+    return this.handleResponse<{
+      id: number;
+      type: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      isDefault: boolean;
+      createdAt: string;
+      updatedAt: string;
+      fullAddress: string;
+    }>(response);
+  }
+
+  async deleteUserAddress(addressId: number) {
+    const response = await fetch(`${this.baseUrl}/profile/addresses/${addressId}`, {
+      method: 'DELETE',
+      ...this.getFetchOptions(true),
+    });
+
+    return this.handleResponse<string>(response);
+  }
+
+  async setDefaultAddress(addressId: number) {
+    console.log('[API] Setting default address - URL:', `${this.baseUrl}/profile/addresses/${addressId}/default`);
+    const response = await fetch(`${this.baseUrl}/profile/addresses/${addressId}/default`, {
+      method: 'PUT',
+      ...this.getFetchOptions(true),
+    });
+    console.log('[API] Set default address response status:', response.status);
+    console.log('[API] Set default address response headers:', Object.fromEntries(response.headers.entries()));
+
+    return this.handleResponse<{
+      id: number;
+      type: string;
+      address: string;
+      city: string;
+      state: string;
+      zipCode: string;
+      isDefault: boolean;
+      createdAt: string;
+      updatedAt: string;
+      fullAddress: string;
     }>(response);
   }
 

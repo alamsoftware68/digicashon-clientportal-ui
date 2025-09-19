@@ -15,21 +15,23 @@ import apiService from '@/services/api';
 import { UIServiceCategory, UIServiceItem, transformServiceCategories } from '@/types/service-categories';
 
 // Legacy interfaces for backward compatibility
-interface ServiceItem extends UIServiceItem {
+interface ServiceItem {
+  id: number;
   name: string;
   price: number;
-  description?: string;
+  description: string;
   image?: string;
-  features?: string[];
+  features: string[];
   badge?: string;
 }
 
-interface ServiceCategory extends UIServiceCategory {
+interface ServiceCategory {
   id: string;
   name: string;
   icon: string;
   services: ServiceItem[];
   bulletPoints: string[];
+  description: string;
 }
 
 const LaptopRepairPage = () => {

@@ -38,23 +38,10 @@ const ChangePassword = () => {
     setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
   };
 
+  // Simplified password validation - just check if password exists
   const validatePassword = (password: string) => {
-    const errors = [];
-    if (password.length < 8) {
-      errors.push('at least 8 characters');
-    }
-    if (!/[A-Z]/.test(password)) {
-      errors.push('one uppercase letter');
-    }
-    if (!/[a-z]/.test(password)) {
-      errors.push('one lowercase letter');
-    }
-    if (!/\d/.test(password)) {
-      errors.push('one number');
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      errors.push('one special character');
-    }
+    const errors: string[] = [];
+    // No complex validation requirements - just basic check
     return errors;
   };
 
@@ -67,11 +54,6 @@ const ChangePassword = () => {
 
     if (!formData.newPassword) {
       newErrors.newPassword = 'New password is required';
-    } else {
-      const passwordErrors = validatePassword(formData.newPassword);
-      if (passwordErrors.length > 0) {
-        newErrors.newPassword = `Password must contain ${passwordErrors.join(', ')}.`;
-      }
     }
 
     if (!formData.confirmPassword) {
@@ -119,18 +101,15 @@ const ChangePassword = () => {
   const getPasswordStrength = (password: string) => {
     if (!password) return { strength: 0, label: '', color: 'bg-gray-200' };
     
-    let score = 0;
-    const checks = validatePassword(password);
-    score = 5 - checks.length;
+    // Simplified password strength based on length only
+    const length = password.length;
     
-    if (score <= 2) {
-      return { strength: score, label: 'Weak', color: 'bg-red-500' };
-    } else if (score <= 3) {
-      return { strength: score, label: 'Fair', color: 'bg-yellow-500' };
-    } else if (score <= 4) {
-      return { strength: score, label: 'Good', color: 'bg-blue-500' };
+    if (length < 4) {
+      return { strength: 1, label: 'Weak', color: 'bg-red-500' };
+    } else if (length < 8) {
+      return { strength: 3, label: 'Fair', color: 'bg-yellow-500' };
     } else {
-      return { strength: score, label: 'Strong', color: 'bg-green-500' };
+      return { strength: 5, label: 'Strong', color: 'bg-green-500' };
     }
   };
 
@@ -142,7 +121,7 @@ const ChangePassword = () => {
         <div className="mb-6">
           <h2 className="text-xl font-semibold text-gray-900">Change Password</h2>
           <p className="text-gray-600 mt-2">
-            Update your password to keep your account secure. Make sure to use a strong password.
+            Update your password to keep your account secure.
           </p>
         </div>
 
@@ -303,32 +282,6 @@ const ChangePassword = () => {
             {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
           </div>
 
-          {/* Password Requirements */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h4 className="text-sm font-medium text-gray-900 mb-2">Password Requirements:</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li className="flex items-center space-x-2">
-                <span className={`w-2 h-2 rounded-full ${formData.newPassword.length >= 8 ? 'bg-green-400' : 'bg-gray-300'}`}></span>
-                <span>At least 8 characters</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <span className={`w-2 h-2 rounded-full ${/[A-Z]/.test(formData.newPassword) ? 'bg-green-400' : 'bg-gray-300'}`}></span>
-                <span>One uppercase letter</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <span className={`w-2 h-2 rounded-full ${/[a-z]/.test(formData.newPassword) ? 'bg-green-400' : 'bg-gray-300'}`}></span>
-                <span>One lowercase letter</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <span className={`w-2 h-2 rounded-full ${/\d/.test(formData.newPassword) ? 'bg-green-400' : 'bg-gray-300'}`}></span>
-                <span>One number</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <span className={`w-2 h-2 rounded-full ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.newPassword) ? 'bg-green-400' : 'bg-gray-300'}`}></span>
-                <span>One special character</span>
-              </li>
-            </ul>
-          </div>
 
           {/* Submit Button */}
           <button

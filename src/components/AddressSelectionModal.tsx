@@ -14,7 +14,7 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
   onClose, 
   onSelectAddress 
 }) => {
-  const { user, addAddress } = useAuth();
+  const { user, addAddress, fetchUserAddresses } = useAuth();
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
@@ -27,7 +27,19 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
     isDefault: false
   });
 
-  // Set default address as selected when modal opens
+  // Fetch addresses and set default when modal opens
+  useEffect(() => {
+    if (isOpen && user) {
+      // Fetch latest addresses from API
+      fetchUserAddresses().then(() => {
+        console.log('Addresses refreshed');
+      }).catch(error => {
+        console.error('Failed to fetch addresses:', error);
+      });
+    }
+  }, [isOpen, user, fetchUserAddresses]);
+  
+  // Set default address as selected when addresses are loaded
   useEffect(() => {
     if (isOpen && user && user.addresses.length > 0) {
       const defaultAddress = user.addresses.find(addr => addr.isDefault);
@@ -37,7 +49,7 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
         setSelectedAddressId(user.addresses[0].id);
       }
     }
-  }, [user, isOpen]);
+  }, [user?.addresses, isOpen]);
 
   // Early return after all hooks are called
   if (!isOpen || !user) return null;
@@ -65,7 +77,15 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
 
     try {
       setIsAddingAddress(true);
-      await addAddress(newAddress);
+      console.log('[AddressModal] Starting address addition process...');
+      console.log('[AddressModal] Address data to add:', JSON.stringify(newAddress, null, 2));
+      console.log('[AddressModal] Current user:', user?.name, 'ID:', user?.id);
+      console.log('[AddressModal] Auth token exists:', !!localStorage.getItem('auth_token'));
+      
+      const result = await addAddress(newAddress);
+      
+      console.log('[AddressModal] addAddress() returned:', result);
+      console.log('[AddressModal] Address added successfully');
       
       // Reset form and hide it
       setNewAddress({
@@ -78,12 +98,25 @@ const AddressSelectionModal: React.FC<AddressSelectionModalProps> = ({
       });
       setShowAddForm(false);
       
-      // Select the newly added address (it will be the last one)
-      const newId = (user.addresses.length + 1).toString();
-      setSelectedAddressId(newId);
-    } catch (error) {
-      console.error('Error adding address:', error);
-      alert('Failed to add address. Please try again.');
+      // Wait a moment for addresses to refresh, then select the newest one
+      setTimeout(() => {
+        if (user && user.addresses.length > 0) {
+          // Sort by creation date if available, or use the last one
+          const sortedAddresses = [...user.addresses].sort((a, b) => {
+            if (a.createdAt && b.createdAt) {
+              return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            }
+            return 0;
+          });
+          const newestAddress = sortedAddresses[0] || user.addresses[user.addresses.length - 1];
+          setSelectedAddressId(newestAddress.id);
+        }
+      }, 500);
+      
+      alert('Address added successfully!');
+    } catch (error: any) {
+      console.error('[AddressModal] Error adding address:', error);
+      alert(error.message || 'Failed to add address. Please try again.');
     } finally {
       setIsAddingAddress(false);
     }

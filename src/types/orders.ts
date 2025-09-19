@@ -48,6 +48,7 @@ export interface Order {
   customerNotes?: string;
   technicianNotes?: string;
   service: OrderServiceDetails;
+  services?: OrderService[]; // Support for multiple services
   technician?: any;
   address: OrderAddress;
 }

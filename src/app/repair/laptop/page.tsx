@@ -37,7 +37,7 @@ interface ServiceCategory {
 }
 
 const LaptopRepairPage = () => {
-  const { isLoggedIn, addOrder } = useAuth();
+  const { isLoggedIn, addOrder, user } = useAuth();
   const { 
     cartItems, 
     cartSummary, 
@@ -978,7 +978,7 @@ const LaptopRepairPage = () => {
       />
       
       {/* Order Details Modal */}
-      {selectedAddress && (
+      {selectedAddress && user && (
         <OrderDetailsModal
           isOpen={isOrderDetailsOpen}
           onClose={() => {
@@ -987,9 +987,11 @@ const LaptopRepairPage = () => {
           }}
           onConfirm={handleOrderDetailsConfirm}
           selectedAddress={selectedAddress}
+          cartItems={cartItems}
           totalAmount={getCartTotal()}
           itemCount={getCartItemCount()}
           isPlacingOrder={isBookingInProgress}
+          user={user}
         />
       )}
       

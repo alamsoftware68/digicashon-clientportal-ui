@@ -533,6 +533,191 @@ class ApiService {
     }
   }
 
+  // Cart API calls
+  async addItemToCart(serviceItemId: number, quantity: number = 1, notes?: string) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      const requestBody: any = { serviceItemId, quantity };
+      if (notes) {
+        requestBody.notes = notes;
+      }
+
+      const response = await fetch(`${this.baseUrl}/service-carts/items`, {
+        method: 'POST',
+        ...this.getFetchOptions(false), // Try without auth first, then with auth if needed
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse<{
+        id: number;
+        cartId: number;
+        serviceItemId: number;
+        serviceTitle: string;
+        serviceDescription: string;
+        categoryName: string;
+        serviceIcon: string;
+        quantity: number;
+        unitPrice: number;
+        totalPrice: number;
+        notes?: string;
+        createdAt: string;
+        updatedAt: string;
+        serviceDetails: {
+          id: number;
+          serviceTitle: string;
+          serviceDescription: string;
+          bulletPoints: string[];
+          serviceIcon: string;
+          price: number;
+          displayOrder: number;
+          isActive: boolean;
+          createdAt: string;
+          updatedAt: string;
+        };
+        version: number;
+      }>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async getCartItems() {
+    try {
+      const response = await fetch(`${this.baseUrl}/service-carts/items`, {
+        method: 'GET',
+        ...this.getFetchOptions(false),
+      });
+
+      return this.handleResponse<any[]>(response);
+    } catch (error) {
+      console.error('Get cart items error:', error);
+      throw error;
+    }
+  }
+
+  async getCartSummary() {
+    try {
+      const response = await fetch(`${this.baseUrl}/service-carts/summary`, {
+        method: 'GET',
+        ...this.getFetchOptions(false),
+      });
+
+      return this.handleResponse<{
+        itemCount: number;
+        totalAmount: number;
+        isEmpty: boolean;
+      }>(response);
+    } catch (error) {
+      console.error('Get cart summary error:', error);
+      throw error;
+    }
+  }
+
+  async updateCartItemQuantity(cartItemId: number, quantity: number) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/service-carts/items/${cartItemId}`, {
+        method: 'PUT',
+        ...this.getFetchOptions(false),
+        body: JSON.stringify({ quantity }),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  async removeItemFromCart(cartItemId: number) {
+    try {
+      const response = await fetch(`${this.baseUrl}/service-carts/items/${cartItemId}`, {
+        method: 'DELETE',
+        ...this.getFetchOptions(false),
+      });
+
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Remove cart item error:', error);
+      throw error;
+    }
+  }
+
+  async clearCart() {
+    try {
+      const response = await fetch(`${this.baseUrl}/service-carts/clear`, {
+        method: 'DELETE',
+        ...this.getFetchOptions(false),
+      });
+
+      return this.handleResponse(response);
+    } catch (error) {
+      console.error('Clear cart error:', error);
+      throw error;
+    }
+  }
+
+  async isServiceInCart(serviceId: number) {
+    try {
+      const response = await fetch(`${this.baseUrl}/service-carts/check-service/${serviceId}`, {
+        method: 'GET',
+        ...this.getFetchOptions(false),
+      });
+
+      return this.handleResponse<{
+        serviceId: number;
+        isInCart: boolean;
+      }>(response);
+    } catch (error) {
+      console.error('Check service in cart error:', error);
+      throw error;
+    }
+  }
+
+  // Order API calls
+  async createOrderFromCart(orderData: {
+    deliveryAddress: any;
+    contactIdentifier: string;
+    otpCode: string;
+    notes?: string;
+  }) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/orders/create-from-cart`, {
+        method: 'POST',
+        ...this.getFetchOptions(true),
+        body: JSON.stringify(orderData),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   // Utility methods
   async checkEmailAvailability(email: string) {
     const response = await fetch(`${this.baseUrl}/auth/check-email?email=${encodeURIComponent(email)}`, {

@@ -10,6 +10,7 @@ import ViewDetailsButton from '@/components/ViewDetailsButton';
 import LoginModal from '@/components/LoginModal';
 import AddressSelectionModal from '@/components/AddressSelectionModal';
 import { useAuth, Address } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
 import apiService from '@/services/api';
 import { UIServiceCategory, UIServiceItem, transformServiceCategories } from '@/types/service-categories';
 
@@ -33,11 +34,22 @@ interface ServiceCategory extends UIServiceCategory {
 
 const LaptopRepairPage = () => {
   const { isLoggedIn, addOrder } = useAuth();
+  const { 
+    cartItems, 
+    cartSummary, 
+    isLoading: isCartLoading, 
+    addItemToCart, 
+    removeItemFromCart, 
+    updateItemQuantity,
+    clearCart,
+    isServiceInCart,
+    getCartTotal,
+    getCartItemCount
+  } = useCart();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>('home-visit');
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
-  const [cart, setCart] = useState<Array<{ name: string; price: number }>>([]);
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(true);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
@@ -79,31 +91,7 @@ const LaptopRepairPage = () => {
     fetchServiceCategories();
   }, []);
 
-  // Load cart from localStorage on mount
-  useEffect(() => {
-    const savedCart = localStorage.getItem('repairapp_cart');
-    if (savedCart) {
-      try {
-        const cartData = JSON.parse(savedCart);
-        setCart(cartData);
-        console.log('[Cart] Loaded cart from localStorage:', cartData);
-      } catch (error) {
-        console.error('[Cart] Failed to parse saved cart:', error);
-        localStorage.removeItem('repairapp_cart');
-      }
-    }
-  }, []);
-
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    if (cart.length > 0) {
-      localStorage.setItem('repairapp_cart', JSON.stringify(cart));
-      console.log('[Cart] Saved cart to localStorage:', cart);
-    } else {
-      localStorage.removeItem('repairapp_cart');
-      console.log('[Cart] Cleared cart from localStorage');
-    }
-  }, [cart]);
+  // Cart is now managed by CartContext - no localStorage management needed
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [isBookingInProgress, setIsBookingInProgress] = useState<boolean>(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState<boolean>(false);
@@ -122,28 +110,39 @@ const LaptopRepairPage = () => {
     setTimeout(() => setSelectedCategory(null), 300);
   };
 
-  const addToCart = (service: ServiceItem) => {
-    setCart([...cart, { name: service.name, price: service.price }]);
+  const handleAddToCart = async (service: ServiceItem) => {
+    try {
+      await addItemToCart(service.id, 1);
+      console.log(`[Cart] ✅ Added ${service.name} to cart`);
+    } catch (error) {
+      console.error(`[Cart] ❌ Failed to add ${service.name} to cart:`, error);
+      alert('Failed to add item to cart. Please try again.');
+    }
   };
 
-  const removeFromCart = (index: number) => {
-    setCart(cart.filter((_, i) => i !== index));
+  const handleRemoveFromCart = async (cartItemId: number) => {
+    try {
+      await removeItemFromCart(cartItemId);
+      console.log('[Cart] ✅ Item removed from cart');
+    } catch (error) {
+      console.error('[Cart] ❌ Failed to remove item from cart:', error);
+      alert('Failed to remove item from cart. Please try again.');
+    }
   };
 
-  const removeServiceFromCart = (serviceName: string) => {
-    setCart(cart.filter(item => item.name !== serviceName));
+  const removeServiceFromCart = async (serviceName: string) => {
+    const cartItem = cartItems.find(item => item.serviceTitle === serviceName);
+    if (cartItem) {
+      await handleRemoveFromCart(cartItem.id);
+    }
   };
 
-  const isServiceInCart = (serviceName: string) => {
-    return cart.some(item => item.name === serviceName);
-  };
-
-  const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price, 0);
+  const isServiceInCartByName = (serviceName: string) => {
+    return cartItems.some(item => item.serviceTitle === serviceName);
   };
 
   const handleBookNow = async () => {
-    if (cart.length === 0) return;
+    if (getCartItemCount() === 0) return;
 
     if (!isLoggedIn) {
       setIsLoginModalOpen(true);
@@ -159,16 +158,23 @@ const LaptopRepairPage = () => {
     
     try {
       setIsBookingInProgress(true);
-      const totalAmount = getTotalPrice();
+      const totalAmount = getCartTotal();
+      
+      // Convert cart items to the format expected by addOrder
+      const services = cartItems.map(item => ({
+        name: item.serviceTitle,
+        price: item.unitPrice
+      }));
+      
       const orderId = await addOrder({
-        services: cart,
+        services: services,
         totalAmount: totalAmount,
         selectedAddress: address
       });
       
       // Clear cart and show success
       setLastOrderAmount(totalAmount);
-      setCart([]);
+      await clearCart(); // Clear cart using CartContext
       setLastOrderId(orderId);
       setShowOrderSuccess(true);
     } catch (error) {
@@ -454,10 +460,10 @@ const LaptopRepairPage = () => {
                     </h3>
                     <p className="text-blue-100 text-sm">Selected services</p>
                   </div>
-                  {cart.length > 0 && (
+                  {getCartItemCount() > 0 && (
                     <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
                       <span className="text-white font-bold text-sm">
-                        {cart.length} item{cart.length > 1 ? 's' : ''}
+                        {getCartItemCount()} item{getCartItemCount() > 1 ? 's' : ''}
                       </span>
                     </div>
                   )}
@@ -469,7 +475,7 @@ const LaptopRepairPage = () => {
               
               {/* Container sized to show exactly 2 items at a time */}
               <div className="h-[500px] flex flex-col">
-                {cart.length === 0 ? (
+                {getCartItemCount() === 0 ? (
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
                       <div className="relative">
@@ -494,8 +500,8 @@ const LaptopRepairPage = () => {
                   <>
                     {/* Scrollable cart items - height adjusted to show 2 items */}
                     <div className="h-[240px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-gray-50">
-                      {cart.map((item, index) => (
-                        <div key={index} className="group bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-xl p-3 border border-gray-100 hover:shadow-md transition-all duration-200">
+                      {cartItems.map((item) => (
+                        <div key={item.id} className="group bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-xl p-3 border border-gray-100 hover:shadow-md transition-all duration-200">
                           <div className="flex justify-between items-start">
                             <div className="flex-1 pr-3">
                               <div className="flex items-center mb-2">
@@ -504,20 +510,28 @@ const LaptopRepairPage = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                   </svg>
                                 </div>
-                                <h4 className="font-semibold text-gray-900 text-sm leading-tight">{item.name}</h4>
+                                <h4 className="font-semibold text-gray-900 text-sm leading-tight">{item.serviceTitle}</h4>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                  ₹{item.price}
+                                  ₹{item.totalPrice}
                                 </span>
-                                <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                                  ✓ Added
-                                </span>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-xs text-gray-500">
+                                    Qty: {item.quantity}
+                                  </span>
+                                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                    ✓ Added
+                                  </span>
+                                </div>
                               </div>
                             </div>
                             <button 
-                              onClick={() => removeFromCart(index)}
-                              className="flex-shrink-0 w-6 h-6 bg-red-100 hover:bg-red-200 text-red-500 hover:text-red-600 rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-110"
+                              onClick={() => handleRemoveFromCart(item.id)}
+                              disabled={isCartLoading}
+                              className={`flex-shrink-0 w-6 h-6 bg-red-100 hover:bg-red-200 text-red-500 hover:text-red-600 rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-110 ${
+                                isCartLoading ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
                             >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -535,16 +549,16 @@ const LaptopRepairPage = () => {
                         <div className="flex justify-between items-center mb-4">
                           <span className="text-lg font-bold text-gray-800">Total Amount:</span>
                           <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            ₹{getTotalPrice()}
+                            ₹{getCartTotal()}
                           </span>
                         </div>
                         
                         {/* Redesigned Book Now Button - Smaller Size */}
                         <button 
                           onClick={handleBookNow}
-                          disabled={isBookingInProgress || cart.length === 0}
+                          disabled={isBookingInProgress || getCartItemCount() === 0}
                           className={`w-full relative overflow-hidden text-white py-3 px-4 rounded-lg font-semibold text-base shadow-lg transition-all duration-300 transform group ${
-                            isBookingInProgress || cart.length === 0
+                            isBookingInProgress || getCartItemCount() === 0
                               ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 hover:shadow-xl hover:scale-[1.02]'
                           }`}
@@ -566,7 +580,7 @@ const LaptopRepairPage = () => {
                                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
-                                Book Now - ₹{getTotalPrice()}
+                                Book Now - ₹{getCartTotal()}
                               </>
                             )}
                           </div>
@@ -675,14 +689,14 @@ const LaptopRepairPage = () => {
                     </div>
                     
                     {/* Cart Count Badge */}
-                    {cart.length > 0 && (
+                    {getCartItemCount() > 0 && (
                       <div className="bg-gradient-to-r from-green-400 to-emerald-400 backdrop-blur-sm rounded-full px-3 py-1 border border-white/30 shadow-lg">
                         <div className="flex items-center">
                           <svg className="w-4 h-4 mr-1 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13v8a2 2 0 002 2h7a2 2 0 002-2v-8m-9 0V9a2 2 0 012-2h7a2 2 0 012 2v4m-9 0h9" />
                           </svg>
                           <span className="text-white text-sm font-bold">
-                            {cart.length} in cart
+                            {getCartItemCount()} in cart
                           </span>
                         </div>
                       </div>
@@ -775,7 +789,7 @@ const LaptopRepairPage = () => {
                       )}
                       
                       {/* Enhanced Cart Control Buttons with Visual Feedback */}
-                      {isServiceInCart(service.name) ? (
+                      {isServiceInCartByName(service.name) ? (
                         <div className="space-y-3">
                           {/* Buttons on same row with reduced width */}
                           <div className="flex gap-3">
@@ -861,7 +875,7 @@ const LaptopRepairPage = () => {
                       ) : (
                         <button 
                           onClick={() => {
-                            addToCart(service);
+                            handleAddToCart(service);
                             // Show success animation
                             const button = document.activeElement as HTMLButtonElement;
                             if (button) {
@@ -871,7 +885,10 @@ const LaptopRepairPage = () => {
                               }, 150);
                             }
                           }}
-                          className="w-full relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 group"
+                          disabled={isCartLoading}
+                          className={`w-full relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 group ${
+                            isCartLoading ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                         >
                           <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                           <div className="relative flex items-center justify-center">

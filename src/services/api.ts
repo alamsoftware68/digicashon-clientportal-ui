@@ -495,28 +495,58 @@ class ApiService {
     zipCode: string;
     isDefault?: boolean;
   }) {
-    console.log('[API] Adding address - URL:', `${this.baseUrl}/profile/addresses`);
-    console.log('[API] Adding address - Request body:', JSON.stringify(addressData, null, 2));
-    const response = await fetch(`${this.baseUrl}/profile/addresses`, {
-      method: 'POST',
-      ...this.getFetchOptions(true),
-      body: JSON.stringify(addressData),
-    });
-    console.log('[API] Add address response status:', response.status);
-    console.log('[API] Add address response headers:', Object.fromEntries(response.headers.entries()));
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      console.log('[API] Adding address - URL:', `${this.baseUrl}/profile/addresses`);
+      console.log('[API] Adding address - Request body:', JSON.stringify(addressData, null, 2));
+      console.log('[API] Auth token available:', !!this.token);
+      
+      const response = await fetch(`${this.baseUrl}/profile/addresses`, {
+        method: 'POST',
+        ...this.getFetchOptions(true),
+        body: JSON.stringify(addressData),
+        signal: controller.signal,
+      });
+      
+      console.log('[API] Add address response status:', response.status);
+      console.log('[API] Add address response headers:', Object.fromEntries(response.headers.entries()));
+      
+      // Log response text for debugging
+      if (!response.ok) {
+        const responseText = await response.text();
+        console.log('[API] Add address error response:', responseText);
+        // Re-create response for handleResponse
+        const newResponse = new Response(responseText, {
+          status: response.status,
+          statusText: response.statusText,
+          headers: response.headers
+        });
+        return this.handleResponse(newResponse);
+      }
 
-    return this.handleResponse<{
-      id: number;
-      type: string;
-      address: string;
-      city: string;
-      state: string;
-      zipCode: string;
-      isDefault: boolean;
-      createdAt: string;
-      updatedAt: string;
-      fullAddress: string;
-    }>(response);
+      return this.handleResponse<{
+        id: number;
+        type: string;
+        address: string;
+        city: string;
+        state: string;
+        zipCode: string;
+        isDefault: boolean;
+        createdAt: string;
+        updatedAt: string;
+        fullAddress: string;
+      }>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      console.error('[API] Add address error:', error);
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   async updateUserAddress(addressId: number, addressData: {
@@ -829,6 +859,127 @@ class ApiService {
         method: 'POST',
         ...this.getFetchOptions(true),
         body: JSON.stringify(orderData),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // New Service Cart Order Placement API
+  async placeOrderFromCart(orderData: {
+    addressId: number;
+    problemDescription: string;
+    customerNotes?: string;
+  }) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/service-carts/place-order`, {
+        method: 'POST',
+        ...this.getFetchOptions(true),
+        body: JSON.stringify(orderData),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse<{
+        totalAmount: number;
+        orderNumber: string;
+        address: string;
+        orderId: number;
+        success: boolean;
+        services: {
+          quantity: number;
+          totalPrice: number;
+          price: number;
+          name: string;
+          category: string;
+        }[];
+        message: string;
+        orderDate: string;
+        status: string;
+        itemCount: number;
+      }>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // Get User's Orders
+  async getMyOrders() {
+    try {
+      const response = await fetch(`${this.baseUrl}/orders/my-orders`, {
+        method: 'GET',
+        ...this.getFetchOptions(true),
+      });
+
+      return this.handleResponse<{
+        id: number;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+        orderNumber: string;
+        status: string;
+        totalPrice: number;
+        problemDescription: string;
+        solutionDescription?: string;
+        scheduledDate?: string;
+        completedDate?: string;
+        pickupAddress: string;
+        customerNotes?: string;
+        technicianNotes?: string;
+        service: {
+          id: number;
+          name: string;
+          description: string;
+          deviceType: string;
+          basePrice: number;
+          estimatedDurationHours: number;
+          isActive: boolean;
+          isFeatured: boolean;
+          imageUrl?: string;
+          badge?: string;
+        };
+        technician?: any;
+        address: {
+          id: number;
+          type: string;
+          address: string;
+          city: string;
+          state: string;
+          zipCode: string;
+          isDefault: boolean;
+          fullAddress: string;
+        };
+      }[]>(response);
+    } catch (error) {
+      console.error('Get orders error:', error);
+      throw error;
+    }
+  }
+
+  // Cancel Order by ID
+  async cancelOrder(orderId: number, reason: string = 'Customer cancelled') {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      const response = await fetch(`${this.baseUrl}/orders/${orderId}/cancel?reason=${encodeURIComponent(reason)}`, {
+        method: 'PUT',
+        ...this.getFetchOptions(true),
         signal: controller.signal,
       });
 

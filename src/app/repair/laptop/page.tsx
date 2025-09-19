@@ -9,10 +9,12 @@ import DigiCashOnPromise from '@/components/DigiCashOnPromise';
 import ViewDetailsButton from '@/components/ViewDetailsButton';
 import LoginModal from '@/components/LoginModal';
 import AddressSelectionModal from '@/components/AddressSelectionModal';
+import OrderDetailsModal from '@/components/OrderDetailsModal';
 import { useAuth, Address } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import apiService from '@/services/api';
 import { UIServiceCategory, UIServiceItem, transformServiceCategories } from '@/types/service-categories';
+import { PlaceOrderRequest } from '@/types/orders';
 
 // Legacy interfaces for backward compatibility
 interface ServiceItem {
@@ -100,6 +102,7 @@ const LaptopRepairPage = () => {
   const [lastOrderId, setLastOrderId] = useState<string>('');
   const [lastOrderAmount, setLastOrderAmount] = useState<number>(0);
   const [isAddressSelectionOpen, setIsAddressSelectionOpen] = useState<boolean>(false);
+  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState<boolean>(false);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
 
   const handleCategoryClick = (category: ServiceCategory) => {
@@ -155,33 +158,50 @@ const LaptopRepairPage = () => {
     setIsAddressSelectionOpen(true);
   };
 
-  const handleAddressSelected = async (address: Address) => {
+  const handleAddressSelected = (address: Address) => {
     setSelectedAddress(address);
-    
+    setIsAddressSelectionOpen(false);
+    // Now open the order details modal
+    setIsOrderDetailsOpen(true);
+  };
+
+  const handleOrderDetailsConfirm = async (details: { problemDescription: string; customerNotes: string }) => {
+    if (!selectedAddress) {
+      alert('Please select an address first');
+      return;
+    }
+
     try {
       setIsBookingInProgress(true);
       const totalAmount = getCartTotal();
       
-      // Convert cart items to the format expected by addOrder
-      const services = cartItems.map(item => ({
-        name: item.serviceTitle,
-        price: item.unitPrice
-      }));
+      // Prepare order request for the new API
+      const orderRequest: PlaceOrderRequest = {
+        addressId: parseInt(selectedAddress.id), // Convert string ID to number for API
+        problemDescription: details.problemDescription,
+        customerNotes: details.customerNotes
+      };
       
-      const orderId = await addOrder({
-        services: services,
-        totalAmount: totalAmount,
-        selectedAddress: address
-      });
+      console.log('Placing order with:', orderRequest);
       
-      // Clear cart and show success
-      setLastOrderAmount(totalAmount);
-      await clearCart(); // Clear cart using CartContext
-      setLastOrderId(orderId);
-      setShowOrderSuccess(true);
-    } catch (error) {
+      // Call the new place order API
+      const result = await apiService.placeOrderFromCart(orderRequest);
+      
+      if (result.success && result.data) {
+        // Clear cart and show success
+        setLastOrderAmount(result.data.totalAmount);
+        setLastOrderId(result.data.orderNumber);
+        await clearCart(); // Clear cart using CartContext
+        setShowOrderSuccess(true);
+        setIsOrderDetailsOpen(false);
+        
+        console.log('Order placed successfully:', result.data);
+      } else {
+        throw new Error(result.message || 'Failed to place order');
+      }
+    } catch (error: any) {
       console.error('Error placing order:', error);
-      alert('Failed to place order. Please try again.');
+      alert('Failed to place order: ' + (error.message || 'Please try again.'));
     } finally {
       setIsBookingInProgress(false);
     }
@@ -956,6 +976,22 @@ const LaptopRepairPage = () => {
         onClose={() => setIsAddressSelectionOpen(false)}
         onSelectAddress={handleAddressSelected}
       />
+      
+      {/* Order Details Modal */}
+      {selectedAddress && (
+        <OrderDetailsModal
+          isOpen={isOrderDetailsOpen}
+          onClose={() => {
+            setIsOrderDetailsOpen(false);
+            setSelectedAddress(null);
+          }}
+          onConfirm={handleOrderDetailsConfirm}
+          selectedAddress={selectedAddress}
+          totalAmount={getCartTotal()}
+          itemCount={getCartItemCount()}
+          isPlacingOrder={isBookingInProgress}
+        />
+      )}
       
       {/* Order Success Modal */}
       {showOrderSuccess && (

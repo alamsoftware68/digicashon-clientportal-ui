@@ -129,6 +129,9 @@ interface Address {
   state: string;
   zipCode: string;
   isDefault: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  fullAddress?: string;
 }
 
 interface OrderService {
@@ -195,6 +198,7 @@ interface AuthContextType {
   changePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
   addOrder: (orderData: { services: { name: string; price: number }[], totalAmount: number, selectedAddress?: Address }) => Promise<string>;
   addAddress: (addressData: Omit<Address, 'id'>) => Promise<boolean>;
+  fetchUserAddresses: () => Promise<void>;
   cancelOrder: (orderId: string) => Promise<boolean>;
 }
 
@@ -268,6 +272,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               localStorage.setItem('repairapp_user', JSON.stringify(userData));
               localStorage.setItem('repairapp_authenticated', 'true');
               console.log('Restored user session from backend token with city:', userData.city);
+              
+              // Load user addresses after setting user
+              await loadUserAddresses(userData);
             } else {
               // Token invalid, clear it
               apiService.setToken(null);
@@ -290,6 +297,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Initialize after component mounts (client-side only)
     initializeAuth();
   }, []);
+
+  // Helper function to load user addresses
+  const loadUserAddresses = async (userData: User) => {
+    try {
+      const result = await apiService.getUserAddresses();
+      if (result.success && result.data) {
+        const apiAddresses = result.data.map(addr => ({
+          id: addr.id.toString(),
+          type: addr.type,
+          address: addr.address,
+          city: addr.city,
+          state: addr.state,
+          zipCode: addr.zipCode,
+          isDefault: addr.isDefault,
+          createdAt: addr.createdAt,
+          updatedAt: addr.updatedAt,
+          fullAddress: addr.fullAddress
+        }));
+        
+        const updatedUser = { ...userData, addresses: apiAddresses };
+        setUser(updatedUser);
+        
+        // Update localStorage
+        localStorage.setItem('repairapp_user', JSON.stringify(updatedUser));
+        
+        console.log('Loaded user addresses:', apiAddresses);
+      }
+    } catch (error) {
+      console.error('Failed to load user addresses:', error);
+    }
+  };
+
+  // Fetch user addresses method
+  const fetchUserAddresses = async () => {
+    if (user) {
+      await loadUserAddresses(user);
+    }
+  };
 
   const login = async (mobileOrEmail: string, password: string): Promise<boolean> => {
     try {
@@ -323,6 +368,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               localStorage.setItem('repairapp_user', JSON.stringify(userData));
               localStorage.setItem('repairapp_authenticated', 'true');
               localStorage.setItem('repairapp_login_time', Date.now().toString());
+              
+              // Load user addresses after successful login
+              await loadUserAddresses(userData);
               
               // Dispatch auth change event
               window.dispatchEvent(new CustomEvent('authChanged', { 
@@ -663,41 +711,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const addAddress = async (addressData: Omit<Address, 'id'>): Promise<boolean> => {
     if (!user) throw new Error('User not logged in');
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Generate address ID
-    const addressCount = user.addresses.length + 1;
-    const addressId = addressCount.toString();
-    
-    // Create new address
-    const newAddress: Address = {
-      id: addressId,
-      ...addressData
-    };
-    
-    // If this is the first address or marked as default, make it default
-    let updatedAddresses = [...user.addresses];
-    
-    if (addressData.isDefault || user.addresses.length === 0) {
-      // Remove default from other addresses
-      updatedAddresses = updatedAddresses.map(addr => ({ ...addr, isDefault: false }));
-      newAddress.isDefault = true;
+    try {
+      console.log('[AuthContext] Adding address with data:', addressData);
+      
+      // Use real API to add address
+      const result = await apiService.addUserAddress({
+        type: addressData.type,
+        address: addressData.address,
+        city: addressData.city,
+        state: addressData.state,
+        zipCode: addressData.zipCode,
+        isDefault: addressData.isDefault || false
+      });
+      
+      console.log('[AuthContext] Add address result:', result);
+      
+      if (result.success) {
+        // Refresh addresses from API
+        console.log('[AuthContext] Address added successfully, refreshing addresses...');
+        await loadUserAddresses(user);
+        return true;
+      } else {
+        console.error('[AuthContext] API returned failure:', result.message);
+        throw new Error(result.message || 'Failed to add address');
+      }
+    } catch (error: any) {
+      console.error('[AuthContext] Error adding address:', {
+        error: error.message,
+        stack: error.stack,
+        addressData: addressData
+      });
+      
+      // Provide more specific error messages
+      if (error.message.includes('401') || error.message.includes('Authentication')) {
+        throw new Error('Please login again to add addresses');
+      } else if (error.message.includes('400') || error.message.includes('Invalid')) {
+        throw new Error('Invalid address data. Please check all fields are filled correctly.');
+      } else if (error.message.includes('403')) {
+        throw new Error('Permission denied. Please contact support.');
+      } else if (error.message.includes('500')) {
+        throw new Error('Server error. Please try again later.');
+      } else {
+        throw new Error(error.message || 'Failed to add address. Please try again.');
+      }
     }
-    
-    // Add new address
-    updatedAddresses.push(newAddress);
-    
-    // Update user with new address
-    const updatedUser = {
-      ...user,
-      addresses: updatedAddresses
-    };
-    
-    setUser(updatedUser);
-    localStorage.setItem('repairapp_user', JSON.stringify(updatedUser));
-    
-    return true;
   };
 
   const cancelOrder = async (orderId: string): Promise<boolean> => {
@@ -1006,7 +1063,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     changePassword,
     addOrder,
     addAddress,
-    cancelOrder
+    fetchUserAddresses,
+    cancelOrder,
   };
 
   return (

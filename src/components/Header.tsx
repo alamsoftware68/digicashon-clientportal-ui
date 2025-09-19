@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useCart } from '@/contexts/CartContext';
 import LoginModal from './LoginModal';
 
 const Header = () => {
@@ -11,6 +12,9 @@ const Header = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
+  
+  // Cart functionality
+  const { getCartItemCount } = useCart();
   
   // Minimal auth state - only what's needed for rendering
   const [user, setUser] = useState<any>(null);
@@ -255,8 +259,28 @@ const Header = () => {
             </div>
           </nav>
 
-          {/* User Profile / Sign In Button */}
-          <div className="flex items-center">
+          {/* Cart Icon and User Profile / Sign In Button */}
+          <div className="flex items-center space-x-4">
+            {/* Cart Icon with Badge */}
+            <Link href="/repair/laptop" className="relative group">
+              <div className="relative p-2 bg-gradient-to-r from-blue-50 to-indigo-50 hover:from-blue-100 hover:to-indigo-100 rounded-xl border border-blue-100 hover:border-blue-200 transition-all duration-200 shadow-sm hover:shadow-md transform hover:scale-105">
+                <svg className="w-6 h-6 text-blue-600 group-hover:text-blue-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13v8a2 2 0 002 2h7a2 2 0 002-2v-8m-9 0V9a2 2 0 012-2h7a2 2 0 012 2v4m-9 0h9" />
+                </svg>
+                
+                {/* Cart Badge */}
+                {getCartItemCount() > 0 && (
+                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-full min-w-[20px] h-5 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-white animate-bounce">
+                    {getCartItemCount() > 99 ? '99+' : getCartItemCount()}
+                  </div>
+                )}
+                
+                {/* Hover tooltip */}
+                <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap">
+                  {getCartItemCount() === 0 ? 'Cart is empty' : `${getCartItemCount()} item${getCartItemCount() > 1 ? 's' : ''} in cart`}
+                </div>
+              </div>
+            </Link>
             {isLoggedIn && user ? (
               <div className="relative dropdown-container">
                 <button 

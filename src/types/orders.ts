@@ -53,6 +53,22 @@ export interface Order {
   address: OrderAddress;
 }
 
+export interface CreateOrderRequest {
+  services: {
+    serviceId: number;
+    name: string;
+    categoryName: string;
+    serviceTitle: string;
+    price: number;
+    quantity: number;
+    notes?: string;
+  }[];
+  addressId: number;
+  totalAmount: number;
+  problemDescription: string;
+  customerNotes?: string;
+}
+
 export interface PlaceOrderRequest {
   addressId: number;
   problemDescription: string;

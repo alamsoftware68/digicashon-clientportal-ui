@@ -845,6 +845,118 @@ class ApiService {
   }
 
   // Order API calls
+  async createOrder(orderData: {
+    services: {
+      serviceId: number;
+      name: string;
+      categoryName: string;
+      serviceTitle: string;
+      price: number;
+      quantity: number;
+      notes?: string;
+    }[];
+    addressId: number;
+    totalAmount: number;
+    problemDescription: string;
+    customerNotes?: string;
+  }) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      console.log('[API] Creating order with new endpoint:', orderData);
+      
+      const response = await fetch(`${this.baseUrl}/orders/create`, {
+        method: 'POST',
+        ...this.getFetchOptions(true),
+        body: JSON.stringify(orderData),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse<{
+        id: number;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+        orderNumber: string;
+        status: string;
+        totalPrice: number;
+        problemDescription: string;
+        solutionDescription?: string;
+        scheduledDate?: string;
+        completedDate?: string;
+        pickupAddress: string;
+        customerNotes?: string;
+        technicianNotes?: string;
+        service: {
+          id: number;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+          name: string;
+          description: string;
+          deviceType: string;
+          basePrice: number;
+          estimatedDurationHours: number;
+          isActive: boolean;
+          isFeatured: boolean;
+          imageUrl?: string;
+          badge?: string;
+        };
+        orderItems: {
+          id: number;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          notes?: string;
+          service: {
+            id: number;
+            createdAt: string;
+            updatedAt: string;
+            version: number;
+            name: string;
+            description: string;
+            deviceType: string;
+            basePrice: number;
+            estimatedDurationHours: number;
+            isActive: boolean;
+            isFeatured: boolean;
+            imageUrl?: string;
+            badge?: string;
+          };
+          serviceName: string;
+          serviceCategory: string;
+          serviceTitle: string;
+          serviceItemId: number;
+        }[];
+        technician?: any;
+        address: {
+          id: number;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+          type: string;
+          address: string;
+          city: string;
+          state: string;
+          zipCode: string;
+          isDefault: boolean;
+          fullAddress: string;
+        };
+      }>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   async createOrderFromCart(orderData: {
     deliveryAddress: any;
     contactIdentifier: string;
@@ -891,22 +1003,29 @@ class ApiService {
       });
 
       return this.handleResponse<{
-        totalAmount: number;
+        id: number;
         orderNumber: string;
-        address: string;
-        orderId: number;
-        success: boolean;
-        services: {
-          quantity: number;
-          totalPrice: number;
-          price: number;
-          name: string;
-          category: string;
-        }[];
-        message: string;
-        orderDate: string;
         status: string;
-        itemCount: number;
+        totalPrice: number;
+        createdAt: string;
+        problemDescription?: string;
+        customerNotes?: string;
+        // FIXED: Actual cart items are now stored and returned
+        services: {
+          name: string;        // "MacBook" (actual cart item name)
+          category: string;    // "Home Visit" (actual cart category) 
+          quantity: number;
+          price: number;
+          totalPrice: number;
+        }[];
+        // Backward compatibility fields
+        totalAmount?: number;
+        address?: string;
+        orderId?: number;
+        success?: boolean;
+        message?: string;
+        orderDate?: string;
+        itemCount?: number;
       }>(response);
     } catch (error: any) {
       if (error.name === 'AbortError') {
@@ -921,12 +1040,14 @@ class ApiService {
   // Get User's Orders
   async getMyOrders() {
     try {
+      console.log('[API] Fetching user orders from /orders/my-orders');
+      
       const response = await fetch(`${this.baseUrl}/orders/my-orders`, {
         method: 'GET',
         ...this.getFetchOptions(true),
       });
 
-      return this.handleResponse<{
+      const result = await this.handleResponse<{
         id: number;
         createdAt: string;
         updatedAt: string;
@@ -941,7 +1062,32 @@ class ApiService {
         pickupAddress: string;
         customerNotes?: string;
         technicianNotes?: string;
-        service: {
+        // *** ENHANCED: Now includes orderItems with new fields ***
+        orderItems: {
+          id: number;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          notes?: string;
+          serviceName?: string;      // "MacBook" - from new column
+          serviceCategory?: string;  // "Home Visit" - from new column  
+          serviceTitle?: string;     // "MacBook Pro" - from new column
+          serviceItemId?: number;    // ID from service_items table
+          service: {
+            id: number;
+            name: string;
+            description: string;
+            deviceType: string;
+            basePrice: number;
+            estimatedDurationHours: number;
+            isActive: boolean;
+            isFeatured: boolean;
+            imageUrl?: string;
+            badge?: string;
+          };
+        }[];
+        // Backward compatibility: Keep original service reference
+        service?: {
           id: number;
           name: string;
           description: string;
@@ -965,8 +1111,140 @@ class ApiService {
           fullAddress: string;
         };
       }[]>(response);
+      
+      console.log('[API] Successfully fetched user orders:', result.data?.length);
+      
+      // Debug log the orderItems structure
+      if (result.data && result.data.length > 0) {
+        result.data.forEach((order, index) => {
+          console.log(`[API] Order ${index + 1} (${order.orderNumber}):`, {
+            orderItemsCount: order.orderItems?.length || 0,
+            orderItems: order.orderItems?.map(item => ({
+              serviceName: item.serviceName,
+              serviceCategory: item.serviceCategory,
+              serviceTitle: item.serviceTitle,
+              serviceItemId: item.serviceItemId
+            }))
+          });
+        });
+      }
+      
+      return result;
     } catch (error) {
-      console.error('Get orders error:', error);
+      console.error('[API] Get orders error:', error);
+      throw error;
+    }
+  }
+
+  // Get Order Details by Order Number
+  async getOrderDetails(orderNumber: string) {
+    try {
+      console.log('[API] Fetching order details for order:', orderNumber);
+      
+      const response = await fetch(`${this.baseUrl}/orders/details/${orderNumber}`, {
+        method: 'GET',
+        ...this.getFetchOptions(true),
+      });
+
+      const result = await this.handleResponse<{
+        id: number;
+        createdAt: string;
+        updatedAt: string;
+        version: number;
+        orderNumber: string;
+        status: string;
+        totalPrice: number;
+        problemDescription: string;
+        solutionDescription?: string;
+        scheduledDate?: string;
+        completedDate?: string;
+        pickupAddress: string;
+        customerNotes?: string;
+        technicianNotes?: string;
+        // Complete orderItems with all new fields
+        orderItems: {
+          id: number;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+          quantity: number;
+          unitPrice: number;
+          totalPrice: number;
+          notes?: string;
+          serviceName?: string;      // "MacBook Pro" - from new column
+          serviceCategory?: string;  // "Home Visit" - from new column  
+          serviceTitle?: string;     // "Data Recovery" - from new column
+          serviceItemId?: number;    // ID from service_items table
+          service: {
+            id: number;
+            createdAt: string;
+            updatedAt: string;
+            version: number;
+            name: string;
+            description: string;
+            deviceType: string;
+            basePrice: number;
+            estimatedDurationHours: number;
+            isActive: boolean;
+            isFeatured: boolean;
+            imageUrl?: string;
+            badge?: string;
+          };
+        }[];
+        // Main service for backward compatibility
+        service?: {
+          id: number;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+          name: string;
+          description: string;
+          deviceType: string;
+          basePrice: number;
+          estimatedDurationHours: number;
+          isActive: boolean;
+          isFeatured: boolean;
+          imageUrl?: string;
+          badge?: string;
+        };
+        technician?: any;
+        address: {
+          id: number;
+          createdAt: string;
+          updatedAt: string;
+          version: number;
+          type: string;
+          address: string;
+          city: string;
+          state: string;
+          zipCode: string;
+          isDefault: boolean;
+          fullAddress: string;
+        };
+      }>(response);
+      
+      console.log('[API] Successfully fetched order details:', {
+        orderNumber: result.data?.orderNumber,
+        orderItemsCount: result.data?.orderItems?.length || 0,
+        status: result.data?.status
+      });
+      
+      // Debug log the orderItems structure
+      if (result.data?.orderItems) {
+        result.data.orderItems.forEach((item, index) => {
+          console.log(`[API] OrderItem ${index + 1}:`, {
+            serviceName: item.serviceName,
+            serviceCategory: item.serviceCategory,
+            serviceTitle: item.serviceTitle,
+            serviceItemId: item.serviceItemId,
+            unitPrice: item.unitPrice
+          });
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('[API] Get order details error:', error);
       throw error;
     }
   }

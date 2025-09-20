@@ -3,11 +3,15 @@
 import React, { useState, useEffect } from 'react';
 import apiService from '../../services/api';
 import { Order, ORDER_STATUS_DISPLAY, ORDER_STATUS_COLORS } from '../../types/orders';
+import { useAuth } from '../../contexts/AuthContext';
+import OrderDetailsViewModal from '../OrderDetailsViewModal';
 
 const OrdersHistory = () => {
+  const { user } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrderNumber, setSelectedOrderNumber] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState<number | null>(null);
@@ -55,6 +59,67 @@ const OrdersHistory = () => {
       style: 'currency',
       currency: 'INR'
     }).format(price);
+  };
+
+  // Service name mapping for better display when original cart data is unavailable
+  const getImprovedServiceName = (serviceName: string, deviceType: string) => {
+    // Map generic service names to more user-friendly names
+    const serviceMapping: { [key: string]: string } = {
+      'Display Issue': 'Screen Repair',
+      'Battery Issue': 'Battery Replacement',
+      'Charging Issue': 'Charging Port Repair',
+      'Keyboard Issue': 'Keyboard Replacement',
+      'Motherboard Issue': 'Motherboard Repair',
+      'Software Issue': 'Software Troubleshooting'
+    };
+    
+    return serviceMapping[serviceName] || serviceName;
+  };
+
+  const getImprovedCategoryName = (deviceType: string) => {
+    // Map device types to more user-friendly categories
+    const categoryMapping: { [key: string]: string } = {
+      'LAPTOP': 'Laptop Service',
+      'DESKTOP': 'Desktop Service', 
+      'MOBILE': 'Mobile Service',
+      'TABLET': 'Tablet Service'
+    };
+    
+    return categoryMapping[deviceType] || deviceType || 'Home Visit';
+  };
+
+  // Helper function to get actual service information from order
+  const getOrderServiceInfo = (order: Order) => {
+    // If services array is available (from order placement), use it
+    if (order.services && order.services.length > 0) {
+      console.log(`✅ [Order ${order.orderNumber}] Using original cart data:`, order.services);
+      return {
+        isMultipleServices: order.services.length > 1,
+        serviceCount: order.services.length,
+        primaryServiceName: order.services[0].name,
+        primaryServiceCategory: order.services[0].category,
+        allServiceNames: order.services.map(s => s.name).join(', '),
+        services: order.services
+      };
+    }
+    
+    // Fallback to single service (from getMyOrders API)
+    console.warn(`⚠️ [Order ${order.orderNumber}] Using template data instead of original order:`, {
+      templateService: order.service,
+      note: 'This may not match the original order placed by user'
+    });
+    
+    const improvedServiceName = getImprovedServiceName(order.service.name, order.service.deviceType);
+    const improvedCategoryName = getImprovedCategoryName(order.service.deviceType);
+    
+    return {
+      isMultipleServices: false,
+      serviceCount: 1,
+      primaryServiceName: improvedServiceName,
+      primaryServiceCategory: improvedCategoryName,
+      allServiceNames: improvedServiceName,
+      services: null
+    };
   };
 
   const handleCancelOrder = async (orderId: number) => {
@@ -209,33 +274,33 @@ const OrdersHistory = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="flex-1">
-                        {order.services && order.services.length > 0 ? (
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {order.services.length > 1 ? (
-                                <>Multiple Services ({order.services.length} items)</>
-                              ) : (
-                                order.services[0].name
+                        {(() => {
+                          const serviceInfo = getOrderServiceInfo(order);
+                          return (
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {serviceInfo.isMultipleServices ? (
+                                  <>Multiple Services ({serviceInfo.serviceCount} items)</>
+                                ) : (
+                                  serviceInfo.primaryServiceName
+                                )}
+                              </h3>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {serviceInfo.isMultipleServices ? (
+                                  serviceInfo.allServiceNames
+                                ) : (
+                                  serviceInfo.primaryServiceCategory
+                                )}
+                              </p>
+                              {/* Add a small indicator showing data source */}
+                              {serviceInfo.services && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
+                                  ✓ Cart Data Available
+                                </span>
                               )}
-                            </h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {order.services.length > 1 ? (
-                                order.services.map(service => service.name).join(', ')
-                              ) : (
-                                order.services[0].category
-                              )}
-                            </p>
-                          </div>
-                        ) : (
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
-                              {order.service.name}
-                            </h3>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {order.service.description}
-                            </p>
-                          </div>
-                        )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       <span
                         className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
@@ -270,8 +335,8 @@ const OrdersHistory = () => {
 
                 <div className="flex items-center space-x-2 mt-4">
                   <button
-                    onClick={() => setSelectedOrder(order)}
-                    className="px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    onClick={() => setSelectedOrderNumber(order.orderNumber)}
+                    className="px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors font-medium"
                   >
                     View Details
                   </button>
@@ -291,271 +356,12 @@ const OrdersHistory = () => {
         </div>
       )}
 
-      {/* Order Details Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Order Details</h3>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Order Header */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      {selectedOrder.services && selectedOrder.services.length > 0 ? (
-                        selectedOrder.services.length > 1 ? (
-                          `Service Order (${selectedOrder.services.length} items)`
-                        ) : (
-                          selectedOrder.services[0].name
-                        )
-                      ) : (
-                        selectedOrder.service.name
-                      )}
-                    </h4>
-                    <span
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                        ORDER_STATUS_COLORS[selectedOrder.status] || 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {getStatusIcon(selectedOrder.status)}
-                      <span className="ml-1">{ORDER_STATUS_DISPLAY[selectedOrder.status] || selectedOrder.status}</span>
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">Order Number: {selectedOrder.orderNumber}</p>
-                </div>
-
-                {/* Order Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h5 className="font-medium text-gray-900 mb-2">Service Information</h5>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Service{selectedOrder.services && selectedOrder.services.length > 1 ? 's' : ''}:</span>
-                        <span className="text-gray-900">
-                          {selectedOrder.services && selectedOrder.services.length > 0 ? (
-                            selectedOrder.services.length > 1 ? (
-                              `${selectedOrder.services.length} Items`
-                            ) : (
-                              selectedOrder.services[0].name
-                            )
-                          ) : (
-                            selectedOrder.service.name
-                          )}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Date:</span>
-                        <span className="text-gray-900">{formatDate(selectedOrder.createdAt)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Total Price:</span>
-                        <span className="text-gray-900 font-semibold">{formatPrice(selectedOrder.totalPrice)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h5 className="font-medium text-gray-900 mb-2">Assignment Details</h5>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Technician:</span>
-                        <span className="text-gray-900">{selectedOrder.technician ? selectedOrder.technician.name || 'Assigned' : 'Not Assigned'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Status:</span>
-                        <span className="text-gray-900">{ORDER_STATUS_DISPLAY[selectedOrder.status] || selectedOrder.status}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Service Details */}
-                <div>
-                  <h5 className="font-medium text-gray-900 mb-3">Service Details</h5>
-                  {/* Multiple Services Support */}
-                  {selectedOrder.services && selectedOrder.services.length > 0 ? (
-                    <div className="space-y-3">
-                      {selectedOrder.services.map((service, index) => (
-                        <div key={index} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1">
-                              <h6 className="text-sm font-medium text-gray-900 mb-1">{service.name}</h6>
-                              <p className="text-xs text-gray-600 mb-2">{service.category}</p>
-                              <div className="flex items-center text-xs text-gray-500">
-                                <span>Qty: {service.quantity}</span>
-                                <span className="mx-2">×</span>
-                                <span>{formatPrice(service.price)}</span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-semibold text-blue-600">{formatPrice(service.totalPrice)}</div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      {/* Total for multiple services */}
-                      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-semibold text-gray-900">Total ({selectedOrder.services.length} service{selectedOrder.services.length > 1 ? 's' : ''})</span>
-                          <span className="text-lg font-bold text-blue-600">{formatPrice(selectedOrder.totalPrice)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    /* Single Service Support (Backward Compatibility) */
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-start">
-                          <span className="text-sm font-medium text-gray-900">{selectedOrder.service.name}</span>
-                          <span className="text-sm font-semibold text-gray-900">{formatPrice(selectedOrder.service.basePrice)}</span>
-                        </div>
-                        <p className="text-xs text-gray-600">{selectedOrder.service.description}</p>
-                        <div className="text-xs text-gray-500">
-                          <span>Estimated Duration: {selectedOrder.service.estimatedDurationHours} hours</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-300">
-                        <span className="text-sm font-semibold text-gray-900">Total Amount:</span>
-                        <span className="text-lg font-bold text-blue-600">{formatPrice(selectedOrder.totalPrice)}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Service Address */}
-                <div>
-                  <h5 className="font-medium text-gray-900 mb-2">Service Address</h5>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                        {selectedOrder.address.type}
-                      </span>
-                      {selectedOrder.address.isDefault && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                          Default
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-900">{selectedOrder.address.fullAddress}</p>
-                  </div>
-                </div>
-
-                {/* Problem Description */}
-                {selectedOrder.problemDescription && (
-                  <div>
-                    <h5 className="font-medium text-gray-900 mb-2">Problem Description</h5>
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-sm text-gray-900">{selectedOrder.problemDescription}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Customer Notes */}
-                {selectedOrder.customerNotes && (
-                  <div>
-                    <h5 className="font-medium text-gray-900 mb-2">Customer Notes</h5>
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <p className="text-sm text-gray-900">{selectedOrder.customerNotes}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Status Progress */}
-                <div>
-                  <h5 className="font-medium text-gray-900 mb-3">Order Progress</h5>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(selectedOrder.status)
-                          ? 'bg-yellow-500'
-                          : 'bg-gray-300'
-                      }`}></div>
-                      <span className="ml-2 text-sm text-gray-600">Pending</span>
-                    </div>
-                    <div className={`flex-1 h-1 ${
-                      ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(selectedOrder.status)
-                        ? 'bg-blue-500'
-                        : 'bg-gray-300'
-                    }`}></div>
-                    <div className="flex items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(selectedOrder.status)
-                          ? 'bg-blue-500'
-                          : 'bg-gray-300'
-                      }`}></div>
-                      <span className="ml-2 text-sm text-gray-600">Confirmed</span>
-                    </div>
-                    <div className={`flex-1 h-1 ${
-                      ['IN_PROGRESS', 'COMPLETED'].includes(selectedOrder.status)
-                        ? 'bg-purple-500'
-                        : 'bg-gray-300'
-                    }`}></div>
-                    <div className="flex items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        ['IN_PROGRESS', 'COMPLETED'].includes(selectedOrder.status)
-                          ? 'bg-purple-500'
-                          : 'bg-gray-300'
-                      }`}></div>
-                      <span className="ml-2 text-sm text-gray-600">In Progress</span>
-                    </div>
-                    <div className={`flex-1 h-1 ${
-                      selectedOrder.status === 'COMPLETED'
-                        ? 'bg-green-500'
-                        : 'bg-gray-300'
-                    }`}></div>
-                    <div className="flex items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        selectedOrder.status === 'COMPLETED'
-                          ? 'bg-green-500'
-                          : 'bg-gray-300'
-                      }`}></div>
-                      <span className="ml-2 text-sm text-gray-600">Completed</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 pt-6 border-t">
-                  <button
-                    onClick={() => setSelectedOrder(null)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Close
-                  </button>
-                  {selectedOrder.status === 'COMPLETED' && (
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                      Leave Review
-                    </button>
-                  )}
-                  {selectedOrder.status === 'PENDING' && (
-                    <button 
-                      onClick={() => {
-                        setShowCancelConfirmation(selectedOrder.id);
-                        setSelectedOrder(null);
-                      }}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                      disabled={cancellingOrderId === selectedOrder.id}
-                    >
-                      {cancellingOrderId === selectedOrder.id ? 'Cancelling...' : 'Cancel Order'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* New Order Details Modal using API */}
+      <OrderDetailsViewModal
+        isOpen={!!selectedOrderNumber}
+        onClose={() => setSelectedOrderNumber('')}
+        orderNumber={selectedOrderNumber}
+      />
       
       {/* Cancel Order Confirmation Modal */}
       {showCancelConfirmation && (

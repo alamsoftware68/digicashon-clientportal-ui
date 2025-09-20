@@ -14,7 +14,7 @@ import { useAuth, Address } from '@/contexts/AuthContext';
 import { useCart } from '@/contexts/CartContext';
 import apiService from '@/services/api';
 import { UIServiceCategory, UIServiceItem, transformServiceCategories } from '@/types/service-categories';
-import { PlaceOrderRequest } from '@/types/orders';
+import { CreateOrderRequest, PlaceOrderRequest } from '@/types/orders';
 
 // Legacy interfaces for backward compatibility
 interface ServiceItem {
@@ -175,33 +175,78 @@ const LaptopRepairPage = () => {
       setIsBookingInProgress(true);
       const totalAmount = getCartTotal();
       
+      // Transform cart items to the new API format
+      const services = cartItems.map(item => ({
+        serviceId: item.serviceItemId, // Use the actual service item ID from backend
+        name: item.serviceTitle, // Service item name (e.g., "MacBook")
+        categoryName: item.categoryName, // Category name (e.g., "Home Visit")
+        serviceTitle: item.serviceTitle, // Service title (e.g., "MacBook")
+        price: item.unitPrice, // Unit price from cart
+        quantity: item.quantity,
+        notes: item.notes || undefined
+      }));
+      
+      console.log('[Order] Cart items transformation:', {
+        originalCartItems: cartItems.map(item => ({
+          id: item.id,
+          serviceItemId: item.serviceItemId,
+          serviceTitle: item.serviceTitle,
+          categoryName: item.categoryName,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity
+        })),
+        transformedServices: services
+      });
+      
       // Prepare order request for the new API
-      const orderRequest: PlaceOrderRequest = {
+      const orderRequest: CreateOrderRequest = {
+        services: services,
         addressId: parseInt(selectedAddress.id), // Convert string ID to number for API
+        totalAmount: totalAmount,
         problemDescription: details.problemDescription,
         customerNotes: details.customerNotes
       };
       
-      console.log('Placing order with:', orderRequest);
+      console.log('Creating order with new API:', {
+        endpoint: '/orders/create',
+        cartItems: cartItems,
+        transformedServices: services,
+        orderRequest: orderRequest
+      });
       
-      // Call the new place order API
-      const result = await apiService.placeOrderFromCart(orderRequest);
+      // Call the new create order API
+      const result = await apiService.createOrder(orderRequest);
       
       if (result.success && result.data) {
-        // Clear cart and show success
-        setLastOrderAmount(result.data.totalAmount);
-        setLastOrderId(result.data.orderNumber);
+        // Extract order details from the new API response
+        const orderAmount = result.data.totalPrice;
+        const orderNumber = result.data.orderNumber;
+        const orderItems = result.data.orderItems || [];
+        
+        setLastOrderAmount(orderAmount);
+        setLastOrderId(orderNumber);
         await clearCart(); // Clear cart using CartContext
         setShowOrderSuccess(true);
         setIsOrderDetailsOpen(false);
         
-        console.log('Order placed successfully:', result.data);
+        console.log('✅ Order created successfully with enhanced order items:', {
+          orderNumber: orderNumber,
+          totalAmount: orderAmount,
+          orderItems: orderItems,
+          itemCount: orderItems.length,
+          enhancedFields: {
+            serviceName: orderItems.map(item => item.serviceName),
+            serviceCategory: orderItems.map(item => item.serviceCategory),
+            serviceTitle: orderItems.map(item => item.serviceTitle),
+            serviceItemId: orderItems.map(item => item.serviceItemId)
+          }
+        });
       } else {
-        throw new Error(result.message || 'Failed to place order');
+        throw new Error(result.message || 'Failed to create order');
       }
     } catch (error: any) {
-      console.error('Error placing order:', error);
-      alert('Failed to place order: ' + (error.message || 'Please try again.'));
+      console.error('Error creating order:', error);
+      alert('Failed to create order: ' + (error.message || 'Please try again.'));
     } finally {
       setIsBookingInProgress(false);
     }

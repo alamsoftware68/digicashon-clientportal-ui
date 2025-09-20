@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import apiService from '../services/api';
+import jsPDF from 'jspdf';
 
 // Order details response interface based on API response
 interface OrderDetailsResponse {
@@ -93,6 +94,7 @@ const OrderDetailsViewModal: React.FC<OrderDetailsViewModalProps> = ({
   const [orderDetails, setOrderDetails] = useState<OrderDetailsResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   useEffect(() => {
     if (isOpen && orderNumber) {
@@ -193,6 +195,172 @@ const OrderDetailsViewModal: React.FC<OrderDetailsViewModalProps> = ({
     }
   };
 
+  const downloadOrderAsPDF = async () => {
+    if (!orderDetails) return;
+
+    try {
+      setIsGeneratingPdf(true);
+      
+      // Create a new PDF instance
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Add header
+      pdf.setFontSize(20);
+      pdf.setTextColor(51, 51, 51);
+      pdf.text('DigiCashOn - Order Details', 20, 25);
+      
+      // Add order info
+      pdf.setFontSize(12);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Order Number: ${orderDetails.orderNumber}`, 20, 40);
+      pdf.text(`Date: ${formatDate(orderDetails.createdAt)}`, 20, 48);
+      pdf.text(`Status: ${orderDetails.status.replace('_', ' ')}`, 20, 56);
+      
+      // Add a line separator
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(20, 65, 190, 65);
+      
+      let yPosition = 80;
+      
+      // Add order summary
+      pdf.setFontSize(14);
+      pdf.setTextColor(51, 51, 51);
+      pdf.text('Order Summary', 20, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Total Amount: ${formatPrice(orderDetails.totalPrice)}`, 20, yPosition);
+      yPosition += 8;
+      pdf.text(`Service Items: ${orderDetails.orderItems.length}`, 20, yPosition);
+      yPosition += 15;
+      
+      // Add service items
+      pdf.setFontSize(14);
+      pdf.setTextColor(51, 51, 51);
+      pdf.text('Service Items', 20, yPosition);
+      yPosition += 10;
+      
+      orderDetails.orderItems.forEach((item, index) => {
+        pdf.setFontSize(12);
+        pdf.setTextColor(51, 51, 51);
+        pdf.text(`${index + 1}. ${item.serviceName || item.serviceTitle || item.service.name}`, 20, yPosition);
+        yPosition += 8;
+        
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(`Category: ${item.serviceCategory || 'Service'}`, 25, yPosition);
+        yPosition += 6;
+        pdf.text(`Description: ${item.service.description}`, 25, yPosition);
+        yPosition += 6;
+        pdf.text(`Unit Price: ${formatPrice(item.unitPrice)} | Quantity: ${item.quantity}`, 25, yPosition);
+        yPosition += 12;
+        
+        // Check if we need a new page
+        if (yPosition > 250) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+      });
+      
+      // Add address
+      pdf.setFontSize(14);
+      pdf.setTextColor(51, 51, 51);
+      pdf.text('Service Address', 20, yPosition);
+      yPosition += 10;
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 100, 100);
+      pdf.text(`Type: ${orderDetails.address.type}`, 20, yPosition);
+      yPosition += 6;
+      
+      // Split long address text
+      const addressLines = pdf.splitTextToSize(orderDetails.address.fullAddress, 170);
+      pdf.text(addressLines, 20, yPosition);
+      yPosition += addressLines.length * 6 + 10;
+      
+      // Add notes if available
+      if (orderDetails.problemDescription || orderDetails.customerNotes || orderDetails.technicianNotes) {
+        if (yPosition > 230) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        
+        pdf.setFontSize(14);
+        pdf.setTextColor(51, 51, 51);
+        pdf.text('Notes & Information', 20, yPosition);
+        yPosition += 10;
+        
+        if (orderDetails.problemDescription) {
+          pdf.setFontSize(12);
+          pdf.setTextColor(51, 51, 51);
+          pdf.text('Problem Description:', 20, yPosition);
+          yPosition += 8;
+          
+          pdf.setFontSize(10);
+          pdf.setTextColor(100, 100, 100);
+          const problemLines = pdf.splitTextToSize(orderDetails.problemDescription, 170);
+          pdf.text(problemLines, 20, yPosition);
+          yPosition += problemLines.length * 6 + 8;
+        }
+        
+        if (orderDetails.customerNotes) {
+          pdf.setFontSize(12);
+          pdf.setTextColor(51, 51, 51);
+          pdf.text('Customer Notes:', 20, yPosition);
+          yPosition += 8;
+          
+          pdf.setFontSize(10);
+          pdf.setTextColor(100, 100, 100);
+          const customerLines = pdf.splitTextToSize(orderDetails.customerNotes, 170);
+          pdf.text(customerLines, 20, yPosition);
+          yPosition += customerLines.length * 6 + 8;
+        }
+        
+        if (orderDetails.technicianNotes) {
+          pdf.setFontSize(12);
+          pdf.setTextColor(51, 51, 51);
+          pdf.text('Technician Notes:', 20, yPosition);
+          yPosition += 8;
+          
+          pdf.setFontSize(10);
+          pdf.setTextColor(100, 100, 100);
+          const techLines = pdf.splitTextToSize(orderDetails.technicianNotes, 170);
+          pdf.text(techLines, 20, yPosition);
+        }
+      }
+      
+      // Add footer
+      const pageCount = pdf.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(150, 150, 150);
+        pdf.text(`Generated on ${new Date().toLocaleDateString('en-US', { 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        })}`, 20, 285);
+        pdf.text(`Page ${i} of ${pageCount}`, 170, 285);
+      }
+      
+      // Download the PDF
+      pdf.save(`Order-${orderDetails.orderNumber}.pdf`);
+      
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -216,14 +384,44 @@ const OrderDetailsViewModal: React.FC<OrderDetailsViewModalProps> = ({
                 </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors group"
-            >
-              <svg className="w-4 h-4 text-white group-hover:text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            <div className="flex items-center space-x-2">
+              {/* Download PDF Button */}
+              {orderDetails && (
+                <button
+                  onClick={downloadOrderAsPDF}
+                  disabled={isGeneratingPdf}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 rounded-lg transition-colors group"
+                  title="Download Order as PDF"
+                >
+                  {isGeneratingPdf ? (
+                    <>
+                      <svg className="animate-spin w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="text-xs font-medium text-white hidden sm:inline">Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-white group-hover:text-blue-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-xs font-medium text-white group-hover:text-blue-100 hidden sm:inline">Download</span>
+                    </>
+                  )}
+                </button>
+              )}
+              {/* Close Button */}
+              <button
+                onClick={onClose}
+                className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors group"
+                title="Close"
+              >
+                <svg className="w-4 h-4 text-white group-hover:text-gray-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
 

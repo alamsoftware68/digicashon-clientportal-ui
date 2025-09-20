@@ -10,12 +10,16 @@ import OrdersHistory from '../../components/profile/OrdersHistory';
 import AddressManagement from '../../components/profile/AddressManagement';
 import ChangePassword from '../../components/profile/ChangePassword';
 import PaymentBilling from '../../components/profile/PaymentBilling';
+import apiService from '../../services/api';
 
 const ProfilePage = () => {
   const { user, isLoggedIn } = useAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('profile');
+  const [totalOrders, setTotalOrders] = useState<number>(0);
+  const [totalAddresses, setTotalAddresses] = useState<number>(0);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
 
   useEffect(() => {
     if (!isLoggedIn) {
@@ -29,6 +33,41 @@ const ProfilePage = () => {
       setActiveTab(tab);
     }
   }, [searchParams]);
+
+  // Fetch user statistics
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!isLoggedIn) return;
+      
+      try {
+        setIsLoadingStats(true);
+        
+        // Fetch orders and addresses in parallel
+        const [ordersResponse, addressesResponse] = await Promise.all([
+          apiService.getMyOrders(),
+          apiService.getUserAddresses()
+        ]);
+        
+        // Update counts
+        if (ordersResponse.success && ordersResponse.data) {
+          setTotalOrders(ordersResponse.data.length);
+        }
+        
+        if (addressesResponse.success && addressesResponse.data) {
+          setTotalAddresses(addressesResponse.data.length);
+        }
+      } catch (error) {
+        console.error('Error fetching user stats:', error);
+        // Keep default values on error
+        setTotalOrders(0);
+        setTotalAddresses(0);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+    
+    fetchUserStats();
+  }, [isLoggedIn]);
 
   if (!isLoggedIn || !user) {
     return null; // Will redirect in useEffect
@@ -143,12 +182,24 @@ const ProfilePage = () => {
             {/* Quick Stats */}
             <div className="hidden lg:flex items-center space-x-8">
               <div className="text-center">
-                <div className="text-2xl font-bold text-blue-600">{user.orders?.length || 0}</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  {isLoadingStats ? (
+                    <div className="animate-pulse bg-blue-200 h-8 w-8 rounded mx-auto"></div>
+                  ) : (
+                    totalOrders
+                  )}
+                </div>
                 <div className="text-sm text-gray-500">Total Orders</div>
               </div>
               <div className="w-px h-12 bg-gray-200"></div>
               <div className="text-center">
-                <div className="text-2xl font-bold text-green-600">{user.addresses?.length || 0}</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {isLoadingStats ? (
+                    <div className="animate-pulse bg-green-200 h-8 w-8 rounded mx-auto"></div>
+                  ) : (
+                    totalAddresses
+                  )}
+                </div>
                 <div className="text-sm text-gray-500">Addresses</div>
               </div>
               <div className="w-px h-12 bg-gray-200"></div>

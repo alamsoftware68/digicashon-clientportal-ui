@@ -92,7 +92,8 @@ const Header = () => {
     setUser(null);
     setIsLoggedIn(false);
     
-    // Clear localStorage
+    // Clear ALL auth-related localStorage items
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('repairapp_user');
     localStorage.removeItem('repairapp_authenticated');
     localStorage.removeItem('repairapp_login_time');

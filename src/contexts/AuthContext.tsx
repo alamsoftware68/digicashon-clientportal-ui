@@ -582,16 +582,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear state immediately
     setUser(null);
     setIsLoggedIn(false);
     
-    // Clear token from API service
-    apiService.logout();
+    // Clear token from API service first
+    apiService.setToken(null);
     
-    // Clear any remaining localStorage items
+    // Clear ALL auth-related localStorage items
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('repairapp_user');
     localStorage.removeItem('repairapp_authenticated');
     localStorage.removeItem('repairapp_login_time');
+    
+    // Call backend logout (async, but don't wait)
+    apiService.logout().catch(err => console.log('Logout API call failed:', err));
     
     // Dispatch auth change event for Header component
     window.dispatchEvent(new CustomEvent('authChanged', { detail: { type: 'logout' } }));

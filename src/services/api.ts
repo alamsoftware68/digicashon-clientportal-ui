@@ -17,9 +17,16 @@ class ApiService {
 
   constructor() {
     this.baseUrl = API_BASE_URL;
-    // Initialize token from localStorage if available
+    // Initialize token from localStorage if available AND user is authenticated
     if (typeof window !== 'undefined') {
-      this.token = localStorage.getItem('auth_token');
+      const isAuthenticated = localStorage.getItem('repairapp_authenticated') === 'true';
+      if (isAuthenticated) {
+        this.token = localStorage.getItem('auth_token');
+      } else {
+        // Clear any stale tokens if not authenticated
+        localStorage.removeItem('auth_token');
+        this.token = null;
+      }
     }
   }
 
@@ -38,7 +45,7 @@ class ApiService {
   private getFetchOptions(includeAuth: boolean = true): RequestInit {
     return {
       headers: this.getHeaders(includeAuth),
-      credentials: 'include', // This ensures cookies/session data is sent
+      credentials: 'include', // Always include credentials for session-based features (cart, etc.)
     };
   }
 
@@ -432,38 +439,53 @@ class ApiService {
 
   // Service Categories API calls
   async getServiceCategories() {
-    const response = await fetch(`${this.baseUrl}/service-categories`, {
-      method: 'GET',
-      ...this.getFetchOptions(false), // No auth required for service categories
-    });
+    try {
+      console.log('[API] Fetching service categories (no auth required)');
+      const response = await fetch(`${this.baseUrl}/service-categories`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Explicitly omit credentials for public endpoints
+      });
 
-    return this.handleResponse<{
-      totalCategories: number;
-      totalServices: number;
-      availableCategories: string[];
-      categoryGroups: {
-        categoryId: number;
-        categoryName: string;
-        categoryDescription: string;
-        categoryIcon: string;
-        displayOrder: number;
-        serviceCount: number;
-        bulletPoint1: string;
-        bulletPoint2: string;
-        services: {
-          id: number;
-          serviceTitle: string;
-          serviceDescription: string;
-          bulletPoints: string[];
-          serviceIcon: string;
-          price: number;
+      console.log('[API] Service categories response status:', response.status);
+      return this.handleResponse<{
+        totalCategories: number;
+        totalServices: number;
+        availableCategories: string[];
+        categoryGroups: {
+          categoryId: number;
+          categoryName: string;
+          categoryDescription: string;
+          categoryIcon: string;
           displayOrder: number;
-          isActive: boolean;
-          createdAt: string;
-          updatedAt: string;
+          serviceCount: number;
+          bulletPoint1: string;
+          bulletPoint2: string;
+          services: {
+            id: number;
+            serviceTitle: string;
+            serviceDescription: string;
+            bulletPoints: string[];
+            serviceIcon: string;
+            price: number;
+            displayOrder: number;
+            isActive: boolean;
+            createdAt: string;
+            updatedAt: string;
+          }[];
         }[];
-      }[];
-    }>(response);
+      }>(response);
+    } catch (error: any) {
+      console.error('[API] Get service categories error:', error);
+      // Return empty result on error to prevent UI crashes
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch service categories',
+        data: undefined
+      };
+    }
   }
 
   // Address Management API calls

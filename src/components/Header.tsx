@@ -235,11 +235,11 @@ const Header = () => {
                       Repair Laptop
                     </Link>
                     <Link 
-                      href="/repair/mobile" 
+                      href="/sell-product" 
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                       onClick={() => setIsRepairDropdownOpen(false)}
                     >
-                      Repair Mobile
+                      Sell Product
                     </Link>
                   </div>
                 </div>

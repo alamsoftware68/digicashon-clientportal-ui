@@ -84,44 +84,44 @@ const DeviceSellingSection = () => {
               </div>
             </Link>
 
-            {/* Repair Phone */}
-            <Link href="/repair/mobile" className="text-center group cursor-pointer">
+            {/* Sell Product */}
+            <Link href="/sell-product" className="text-center group cursor-pointer">
               <div className="relative">
                 {/* Main card container */}
-                <div className="w-24 h-24 mx-auto mb-4 p-4 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 border-2 border-emerald-100 rounded-xl hover:border-emerald-300 hover:shadow-lg transition-all duration-300 group-hover:scale-110 overflow-hidden">
+                <div className="w-24 h-24 mx-auto mb-4 p-4 bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 border-2 border-purple-100 rounded-xl hover:border-purple-300 hover:shadow-lg transition-all duration-300 group-hover:scale-110 overflow-hidden">
                   {/* Background decoration */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-100/10 via-transparent to-cyan-100/10 rounded-xl"></div>
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-100/10 via-transparent to-pink-100/10 rounded-xl"></div>
                   
-                  {/* Phone SVG icon */}
+                  {/* Shopping Bag SVG icon */}
                   <div className="relative w-full h-full flex items-center justify-center">
-                    <svg className="w-12 h-12 text-emerald-600 group-hover:text-emerald-700 transition-all duration-300 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                    <svg className="w-12 h-12 text-purple-600 group-hover:text-purple-700 transition-all duration-300 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                     </svg>
                   </div>
                   
-                  {/* Signal waves animation on hover */}
+                  {/* Dollar sign animation on hover */}
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-70 transition-opacity duration-500">
-                    <svg className="w-10 h-10 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} className="animate-ping" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                    <svg className="w-10 h-10 text-pink-400 animate-pulse" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.41 16.09V20h-2.67v-1.93c-1.71-.36-3.16-1.46-3.27-3.4h1.96c.1 1.05.82 1.87 2.65 1.87 1.96 0 2.4-.98 2.4-1.59 0-.83-.44-1.61-2.67-2.14-2.48-.6-4.18-1.62-4.18-3.67 0-1.72 1.39-2.84 3.11-3.21V4h2.67v1.95c1.86.45 2.79 1.86 2.85 3.39H14.3c-.05-1.11-.64-1.87-2.22-1.87-1.5 0-2.4.68-2.4 1.64 0 .84.65 1.39 2.67 1.91s4.18 1.39 4.18 3.91c-.01 1.83-1.38 2.83-3.12 3.16z"/>
                     </svg>
                   </div>
                 </div>
                 
                 {/* Floating badge */}
-                <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300">
                   <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                   </svg>
                 </div>
                 
                 {/* Glow effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-200/30 to-cyan-200/30 rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-purple-200/30 to-pink-200/30 rounded-xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10"></div>
               </div>
               
               {/* Text */}
               <div className="space-y-1">
-                <h3 className="text-lg font-bold text-gray-800 group-hover:text-emerald-600 transition-colors duration-300">Repair Phone</h3>
-                <p className="text-sm text-gray-500 group-hover:text-gray-600 transition-colors duration-300">Expert mobile device repairs</p>
+                <h3 className="text-lg font-bold text-gray-800 group-hover:text-purple-600 transition-colors duration-300">Sell Product</h3>
+                <p className="text-sm text-gray-500 group-hover:text-gray-600 transition-colors duration-300">Turn your devices into cash</p>
               </div>
             </Link>
           </div>

@@ -66,9 +66,9 @@ const SellProductPage = () => {
         </div>
 
         {/* Main Categories */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-          {/* Sell Laptop/MacBook */}
-          <Link href="/sell/laptop" className="group">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+          {/* Windows */}
+          <Link href="/sell/windows" className="group">
             <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:scale-105 hover:-translate-y-2">
               {/* Background Gradient */}
               <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
@@ -92,12 +92,12 @@ const SellProductPage = () => {
                 
                 {/* Title */}
                 <h3 className="text-2xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-3 text-center">
-                  Sell LAPTOP/MACBOOK
+                  Windows
                 </h3>
                 
                 {/* Description */}
                 <p className="text-gray-600 group-hover:text-white/90 transition-colors duration-500 text-center mb-4 leading-relaxed">
-                  Get instant quotes for your MacBook, Dell, HP, Lenovo and other laptops
+                  Get instant quotes for your Dell, HP, Lenovo and other Windows laptops
                 </p>
                 
                 {/* Features */}
@@ -131,6 +131,73 @@ const SellProductPage = () => {
               {/* Decorative Elements */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-200/20 rounded-full -mr-16 -mt-16 group-hover:bg-white/10 transition-colors duration-500"></div>
               <div className="absolute bottom-0 left-0 w-24 h-24 bg-purple-200/20 rounded-full -ml-12 -mb-12 group-hover:bg-white/10 transition-colors duration-500"></div>
+            </div>
+          </Link>
+
+          {/* Apple */}
+          <Link href="/sell/apple" className="group">
+            <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:scale-105 hover:-translate-y-2">
+              {/* Background Gradient */}
+              <div className="absolute inset-0 bg-gradient-to-br from-gray-700 via-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              
+              {/* Content */}
+              <div className="relative p-8">
+                {/* Icon Container */}
+                <div className="relative mb-6">
+                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110">
+                    {/* Apple Icon */}
+                    <svg className="w-14 h-14 text-gray-800 group-hover:text-white transition-colors duration-500" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
+                    </svg>
+                  </div>
+                  
+                  {/* Floating Badge */}
+                  <div className="absolute -top-2 -right-2 bg-gradient-to-r from-gray-400 to-gray-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg animate-pulse">
+                    Premium
+                  </div>
+                </div>
+                
+                {/* Title */}
+                <h3 className="text-2xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-3 text-center">
+                  Apple
+                </h3>
+                
+                {/* Description */}
+                <p className="text-gray-600 group-hover:text-white/90 transition-colors duration-500 text-center mb-4 leading-relaxed">
+                  Get top value for your MacBook, MacBook Air, MacBook Pro, and iMac
+                </p>
+                
+                {/* Features */}
+                <ul className="space-y-2 mb-6">
+                  <li className="flex items-center text-sm text-gray-700 group-hover:text-white/90 transition-colors duration-500">
+                    <svg className="w-5 h-5 mr-2 text-green-500 group-hover:text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Premium pricing for Apple
+                  </li>
+                  <li className="flex items-center text-sm text-gray-700 group-hover:text-white/90 transition-colors duration-500">
+                    <svg className="w-5 h-5 mr-2 text-green-500 group-hover:text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Expert Mac evaluation
+                  </li>
+                  <li className="flex items-center text-sm text-gray-700 group-hover:text-white/90 transition-colors duration-500">
+                    <svg className="w-5 h-5 mr-2 text-green-500 group-hover:text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    Same-day payment
+                  </li>
+                </ul>
+                
+                {/* CTA Button */}
+                <button className="w-full bg-gradient-to-r from-gray-700 to-gray-900 group-hover:from-white group-hover:to-white text-white group-hover:text-gray-800 font-bold py-3 rounded-xl shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-105">
+                  Sell Now →
+                </button>
+              </div>
+              
+              {/* Decorative Elements */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-gray-200/20 rounded-full -mr-16 -mt-16 group-hover:bg-white/10 transition-colors duration-500"></div>
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-gray-300/20 rounded-full -ml-12 -mb-12 group-hover:bg-white/10 transition-colors duration-500"></div>
             </div>
           </Link>
 

@@ -1,14 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useAuth, Address } from '../../contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import apiService from '../../services/api';
+import { Address, AddressFormData, transformBackendAddresses, prepareAddressForAPI } from '../../types/address';
 
 const AddressManagement = () => {
-  const { user, updateUser, addAddress } = useAuth();
+  const { user, isLoggedIn } = useAuth();
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
+  const [addressesError, setAddressesError] = useState<string | null>(null);
   const [isAddingAddress, setIsAddingAddress] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AddressFormData>({
     type: '',
     address: '',
     city: '',
@@ -17,8 +22,41 @@ const AddressManagement = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  
+  // State for confirmation dialog
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [addressToSetDefault, setAddressToSetDefault] = useState<Address | null>(null);
 
-  if (!user) return null;
+  if (!user || !isLoggedIn) return null;
+
+  // Load addresses from API on component mount
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        setIsLoadingAddresses(true);
+        setAddressesError(null);
+        console.log('[Addresses] Fetching addresses from API...');
+        
+        const response = await apiService.getUserAddresses();
+        
+        if (response.success && response.data) {
+          const transformedAddresses = transformBackendAddresses(response.data);
+          setAddresses(transformedAddresses);
+          console.log('[Addresses] Successfully loaded', transformedAddresses.length, 'addresses');
+        } else {
+          throw new Error(response.message || 'Failed to fetch addresses');
+        }
+      } catch (error) {
+        console.error('[Addresses] Error fetching addresses:', error);
+        setAddressesError(error instanceof Error ? error.message : 'Failed to load addresses');
+        setAddresses([]);
+      } finally {
+        setIsLoadingAddresses(false);
+      }
+    };
+    
+    fetchAddresses();
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -43,21 +81,39 @@ const AddressManagement = () => {
   const validateForm = () => {
     const newErrors: {[key: string]: string} = {};
 
+    // Validate address type (must be Home, Work, or Other)
+    const validTypes = ['Home', 'Work', 'Other'];
     if (!formData.type.trim()) {
       newErrors.type = 'Address type is required';
+    } else if (!validTypes.includes(formData.type.trim())) {
+      newErrors.type = 'Address type must be Home, Work, or Other';
     }
+    
+    // Validate address (required, max 255 chars)
     if (!formData.address.trim()) {
       newErrors.address = 'Address is required';
+    } else if (formData.address.trim().length > 255) {
+      newErrors.address = 'Address cannot exceed 255 characters';
     }
+    
+    // Validate city (required, max 100 chars)
     if (!formData.city.trim()) {
       newErrors.city = 'City is required';
+    } else if (formData.city.trim().length > 100) {
+      newErrors.city = 'City cannot exceed 100 characters';
     }
+    
+    // Validate state (required, max 100 chars)
     if (!formData.state.trim()) {
       newErrors.state = 'State is required';
+    } else if (formData.state.trim().length > 100) {
+      newErrors.state = 'State cannot exceed 100 characters';
     }
+    
+    // Validate ZIP code (required, exactly 6 digits)
     if (!formData.zipCode.trim()) {
       newErrors.zipCode = 'ZIP code is required';
-    } else if (!/^\d{6}$/.test(formData.zipCode)) {
+    } else if (!/^\d{6}$/.test(formData.zipCode.trim())) {
       newErrors.zipCode = 'ZIP code must be exactly 6 numeric digits only';
     }
 
@@ -113,28 +169,71 @@ const AddressManagement = () => {
     if (!validateForm()) return;
 
     setIsLoading(true);
+    setErrors({});
 
     try {
       if (editingAddress) {
-        // Update existing address - use updateUser for editing
-        const updatedAddresses = user.addresses.map(addr => 
-          addr.id === editingAddress.id 
-            ? { ...addr, ...formData }
-            : addr
-        );
-        updateUser({ addresses: updatedAddresses });
+        // Update existing address
+        const addressData = prepareAddressForAPI(formData);
+        console.log('[Addresses] Updating address with data:', addressData);
+        console.log('[Addresses] Address ID:', parseInt(editingAddress.id));
+        const response = await apiService.updateUserAddress(parseInt(editingAddress.id), addressData);
+        console.log('[Addresses] Update response:', response);
+        
+        if (response.success && response.data) {
+          // Update local state
+          const addressData = response.data;
+          const updatedAddresses = addresses.map(addr => 
+            addr.id === editingAddress.id 
+              ? {
+                  id: addressData.id.toString(),
+                  type: addressData.type,
+                  address: addressData.address,
+                  city: addressData.city,
+                  state: addressData.state,
+                  zipCode: addressData.zipCode,
+                  isDefault: addressData.isDefault
+                }
+              : addr
+          );
+          setAddresses(updatedAddresses);
+          console.log('[Addresses] Address updated successfully:', response.data.id);
+        } else {
+          throw new Error(response.message || 'Failed to update address');
+        }
       } else {
-        // Add new address - use addAddress function from AuthContext
+        // Add new address
         const addressData = {
-          ...formData,
-          isDefault: user.addresses.length === 0 // First address is default
+          ...prepareAddressForAPI(formData),
+          isDefault: addresses.length === 0 // First address is default
         };
-        await addAddress(addressData);
+        console.log('[Addresses] Adding new address with data:', addressData);
+        console.log('[Addresses] Form data before preparation:', formData);
+        const response = await apiService.addUserAddress(addressData);
+        console.log('[Addresses] Add response:', response);
+        
+        if (response.success && response.data) {
+          // Add to local state
+          const addressData = response.data;
+          const newAddress: Address = {
+            id: addressData.id.toString(),
+            type: addressData.type,
+            address: addressData.address,
+            city: addressData.city,
+            state: addressData.state,
+            zipCode: addressData.zipCode,
+            isDefault: addressData.isDefault
+          };
+          setAddresses([...addresses, newAddress]);
+          console.log('[Addresses] Address added successfully:', response.data.id);
+        } else {
+          throw new Error(response.message || 'Failed to add address');
+        }
       }
 
       resetForm();
     } catch (error) {
-      console.error('Error saving address:', error);
+      console.error('[Addresses] Error saving address:', error);
       setErrors({ general: error instanceof Error ? error.message : 'Failed to save address. Please try again.' });
     } finally {
       setIsLoading(false);
@@ -147,46 +246,69 @@ const AddressManagement = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      const response = await apiService.deleteUserAddress(parseInt(addressId));
       
-      const updatedAddresses = user.addresses.filter(addr => addr.id !== addressId);
-      
-      // If we deleted the default address, make the first remaining address default
-      if (updatedAddresses.length > 0) {
-        const deletedAddress = user.addresses.find(addr => addr.id === addressId);
-        if (deletedAddress?.isDefault) {
-          updatedAddresses[0].isDefault = true;
-        }
+      if (response.success) {
+        // Remove from local state
+        const updatedAddresses = addresses.filter(addr => addr.id !== addressId);
+        setAddresses(updatedAddresses);
+        console.log('[Addresses] Address deleted successfully:', addressId);
+      } else {
+        throw new Error(response.message || 'Failed to delete address');
       }
-
-      updateUser({ addresses: updatedAddresses });
     } catch (error) {
-      console.error('Failed to delete address');
+      console.error('[Addresses] Error deleting address:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete address. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleSetDefault = async (addressId: string) => {
+  const handleSetDefault = (addressId: string) => {
+    // Find the address to set as default
+    const selectedAddress = addresses.find(addr => addr.id === addressId);
+    if (selectedAddress) {
+      setAddressToSetDefault(selectedAddress);
+      setShowConfirmDialog(true);
+    }
+  };
+
+  const confirmSetDefault = async () => {
+    if (!addressToSetDefault) return;
+
     setIsLoading(true);
+    setShowConfirmDialog(false);
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
+      console.log('[Addresses] Setting address as default:', addressToSetDefault.id);
+      const response = await apiService.setDefaultAddress(parseInt(addressToSetDefault.id));
+      console.log('[Addresses] Set default response:', response);
       
-      const updatedAddresses = user.addresses.map(addr => ({
-        ...addr,
-        isDefault: addr.id === addressId
-      }));
-
-      updateUser({ addresses: updatedAddresses });
+      if (response.success && response.data) {
+        // Update local state - mark the selected address as default and others as non-default
+        const updatedAddresses = addresses.map(addr => ({
+          ...addr,
+          isDefault: addr.id === addressToSetDefault.id
+        }));
+        setAddresses(updatedAddresses);
+        console.log('[Addresses] Address set as default successfully:', addressToSetDefault.id);
+      } else {
+        throw new Error(response.message || 'Failed to set default address');
+      }
     } catch (error) {
-      console.error('Failed to set default address');
+      console.error('[Addresses] Error setting default address:', error);
+      alert(error instanceof Error ? error.message : 'Failed to set default address. Please try again.');
     } finally {
       setIsLoading(false);
+      setAddressToSetDefault(null);
     }
   };
+
+  const cancelSetDefault = () => {
+    setShowConfirmDialog(false);
+    setAddressToSetDefault(null);
+  };
+
 
   return (
     <div className="p-4">
@@ -206,13 +328,48 @@ const AddressManagement = () => {
       </div>
 
 
-      {/* Addresses List */}
+      {/* Loading State */}
+      {isLoadingAddresses && (
+        <div className="text-center py-12">
+          <div className="relative">
+            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-spin">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </div>
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">Loading Addresses...</h3>
+          <p className="text-gray-500">Please wait while we fetch your saved addresses</p>
+        </div>
+      )}
+      
+      {/* Error State */}
+      {addressesError && !isLoadingAddresses && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-semibold text-red-800 mb-2">Failed to Load Addresses</h3>
+          <p className="text-red-600 mb-6">{addressesError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-red-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+      
+      {/* Addresses List - Only show when loaded and no error */}
+      {!isLoadingAddresses && !addressesError && (
       <div className={`space-y-4 ${
-        user.addresses.length > 3 
+        addresses.length > 3 
           ? 'max-h-96 overflow-y-auto pr-2 custom-scrollbar'
           : ''
       }`}>
-        {user.addresses.length === 0 ? (
+        {addresses.length === 0 ? (
           <div className="text-center py-12">
             <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -228,7 +385,7 @@ const AddressManagement = () => {
             </button>
           </div>
         ) : (
-          user.addresses.map((address) => (
+          addresses.map((address) => (
             <div
               key={address.id}
               className={`p-6 border rounded-lg transition-all ${
@@ -255,19 +412,25 @@ const AddressManagement = () => {
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  {!address.isDefault && (
+                  {/* Set Default button - only show when there are multiple addresses and this is not default */}
+                  {addresses.length > 1 && !address.isDefault && (
                     <button
                       onClick={() => handleSetDefault(address.id)}
                       disabled={isLoading}
-                      className="px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                      className="p-2 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Set as default address"
                     >
-                      Set Default
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
                     </button>
                   )}
                   
                   <button
                     onClick={() => handleEdit(address)}
-                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                    disabled={isLoading}
+                    className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Edit address"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -290,6 +453,7 @@ const AddressManagement = () => {
           ))
         )}
       </div>
+      )}
       
       {/* Add/Edit Address Modal */}
       {showAddModal && (
@@ -354,6 +518,7 @@ const AddressManagement = () => {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Address Type *
+                    <span className="text-xs text-gray-500 font-normal ml-2">(Select Home, Work, or Other)</span>
                   </label>
                   <select
                     name="type"
@@ -532,6 +697,80 @@ const AddressManagement = () => {
                       </>
                     )}
                   </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Custom Confirmation Dialog for Set Default Address */}
+      {showConfirmDialog && addressToSetDefault && (
+        <div className="fixed inset-0 bg-gradient-to-br from-black/70 via-gray-900/60 to-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in-0 duration-300">
+          <div className="bg-white rounded-2xl max-w-sm w-full mx-4 shadow-2xl transform transition-all duration-300 scale-100 animate-in zoom-in-95 slide-in-from-bottom-4">
+            {/* Compact Header */}
+            <div className="relative bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 rounded-t-2xl px-4 py-4 text-white text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl mb-2 shadow-lg">
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-white drop-shadow-sm">
+                Set as Default?
+              </h3>
+            </div>
+            
+            {/* Compact Content */}
+            <div className="px-4 py-4">
+              {/* Address Preview Card */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-3 mb-3">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-medium text-green-800 text-sm truncate">{addressToSetDefault.type}</h4>
+                    <p className="text-green-700 text-xs truncate">{addressToSetDefault.address}</p>
+                    <p className="text-green-700 text-xs truncate">{addressToSetDefault.city}, {addressToSetDefault.state}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <p className="text-gray-600 text-xs text-center mb-4">
+                This will become your primary delivery address
+              </p>
+            </div>
+            
+            {/* Compact Action buttons */}
+            <div className="px-4 py-3 bg-gray-50 rounded-b-2xl border-t border-gray-100">
+              <div className="flex gap-2">
+                <button
+                  onClick={cancelSetDefault}
+                  disabled={isLoading}
+                  className="flex-1 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+                
+                <button
+                  onClick={confirmSetDefault}
+                  disabled={isLoading}
+                  className="flex-1 px-3 py-2 text-xs font-medium text-white bg-gradient-to-r from-green-500 to-emerald-600 border border-transparent rounded-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-2 focus:ring-green-100 shadow-sm hover:shadow transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? (
+                    <div className="flex items-center justify-center">
+                      <svg className="animate-spin w-3 h-3 mr-1 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Setting...
+                    </div>
+                  ) : (
+                    "Set Default"
+                  )}
                 </button>
               </div>
             </div>

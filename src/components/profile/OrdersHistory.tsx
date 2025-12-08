@@ -1,27 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useAuth, Order } from '../../contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
+import apiService from '../../services/api';
+import { Order, ORDER_STATUS_DISPLAY, ORDER_STATUS_COLORS } from '../../types/orders';
+import { useAuth } from '../../contexts/AuthContext';
+import OrderDetailsViewModal from '../OrderDetailsViewModal';
 
 const OrdersHistory = () => {
-  const { user, cancelOrder } = useAuth();
+  const { user } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [selectedOrderNumber, setSelectedOrderNumber] = useState<string>('');
   const [filterStatus, setFilterStatus] = useState<string>('All');
-  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
-  const [showCancelConfirmation, setShowCancelConfirmation] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
+  const [showCancelConfirmation, setShowCancelConfirmation] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!user) return null;
+  // Fetch orders on component mount
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
-  const statusColors = {
-    'Pending': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'In Progress': 'bg-blue-100 text-blue-800 border-blue-200',
-    'Completed': 'bg-green-100 text-green-800 border-green-200',
-    'Cancelled': 'bg-red-100 text-red-800 border-red-200'
+  const fetchOrders = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await apiService.getMyOrders();
+      
+      if (result.success && result.data) {
+        setOrders(result.data);
+        console.log('Orders fetched successfully:', result.data);
+      } else {
+        setError(result.message || 'Failed to fetch orders');
+      }
+    } catch (error: any) {
+      console.error('Error fetching orders:', error);
+      setError(error.message || 'Failed to fetch orders');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const filteredOrders = filterStatus === 'All' 
-    ? user.orders 
-    : user.orders.filter(order => order.status === filterStatus);
+    ? orders 
+    : orders.filter(order => order.status === filterStatus);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -32,72 +55,193 @@ const OrdersHistory = () => {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-IN', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'INR'
     }).format(price);
   };
 
-  const handleCancelOrder = async (orderId: string) => {
+  // Service name mapping for better display when original cart data is unavailable
+  const getImprovedServiceName = (serviceName: string, deviceType: string) => {
+    // Map generic service names to more user-friendly names
+    const serviceMapping: { [key: string]: string } = {
+      'Display Issue': 'Screen Repair',
+      'Battery Issue': 'Battery Replacement',
+      'Charging Issue': 'Charging Port Repair',
+      'Keyboard Issue': 'Keyboard Replacement',
+      'Motherboard Issue': 'Motherboard Repair',
+      'Software Issue': 'Software Troubleshooting'
+    };
+    
+    return serviceMapping[serviceName] || serviceName;
+  };
+
+  const getImprovedCategoryName = (deviceType: string) => {
+    // Map device types to more user-friendly categories
+    const categoryMapping: { [key: string]: string } = {
+      'LAPTOP': 'Laptop Service',
+      'DESKTOP': 'Desktop Service', 
+      'MOBILE': 'Mobile Service',
+      'TABLET': 'Tablet Service'
+    };
+    
+    return categoryMapping[deviceType] || deviceType || 'Home Visit';
+  };
+
+  // Helper function to get actual service information from order
+  const getOrderServiceInfo = (order: Order) => {
+    // If services array is available (from order placement), use it
+    if (order.services && order.services.length > 0) {
+      console.log(`✅ [Order ${order.orderNumber}] Using original cart data:`, order.services);
+      return {
+        isMultipleServices: order.services.length > 1,
+        serviceCount: order.services.length,
+        primaryServiceName: order.services[0].name,
+        primaryServiceCategory: order.services[0].category,
+        allServiceNames: order.services.map(s => s.name).join(', '),
+        services: order.services
+      };
+    }
+    
+    // Fallback to single service (from getMyOrders API)
+    console.warn(`⚠️ [Order ${order.orderNumber}] Using template data instead of original order:`, {
+      templateService: order.service,
+      note: 'This may not match the original order placed by user'
+    });
+    
+    const improvedServiceName = getImprovedServiceName(order.service.name, order.service.deviceType);
+    const improvedCategoryName = getImprovedCategoryName(order.service.deviceType);
+    
+    return {
+      isMultipleServices: false,
+      serviceCount: 1,
+      primaryServiceName: improvedServiceName,
+      primaryServiceCategory: improvedCategoryName,
+      allServiceNames: improvedServiceName,
+      services: null
+    };
+  };
+
+  const handleCancelOrder = async (orderId: number) => {
     try {
       setCancellingOrderId(orderId);
-      const success = await cancelOrder(orderId);
-      if (success) {
+      const result = await apiService.cancelOrder(orderId, 'Customer requested cancellation');
+      
+      if (result.success) {
         setShowCancelConfirmation(null);
-        // Show success message or notification here if needed
+        // Refresh orders to show updated status
+        await fetchOrders();
+        alert('Order cancelled successfully!');
+      } else {
+        throw new Error(result.message || 'Failed to cancel order');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error cancelling order:', error);
-      alert(error instanceof Error ? error.message : 'Failed to cancel order. Please try again.');
+      alert(error.message || 'Failed to cancel order. Please try again.');
     } finally {
       setCancellingOrderId(null);
     }
   };
 
-  const getStatusIcon = (status: Order['status']) => {
+  const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'Pending':
+      case 'PENDING':
         return (
           <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
-      case 'In Progress':
+      case 'CONFIRMED':
         return (
           <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      case 'IN_PROGRESS':
+        return (
+          <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
         );
-      case 'Completed':
+      case 'COMPLETED':
         return (
           <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
-      case 'Cancelled':
+      case 'CANCELLED':
         return (
           <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         );
+      default:
+        return (
+          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <svg className="animate-spin w-12 h-12 text-blue-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-gray-600">Loading your orders...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <div className="text-center py-12">
+          <svg className="w-16 h-16 text-red-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+          </svg>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Orders</h3>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <button
+            onClick={fetchOrders}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-semibold text-gray-900">Orders & Service History</h2>
         <div className="flex items-center space-x-4">
+          <button
+            onClick={fetchOrders}
+            className="px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+          >
+            Refresh
+          </button>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="All">All Orders</option>
-            <option value="Pending">Pending</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
+            <option value="PENDING">Pending</option>
+            <option value="CONFIRMED">Confirmed</option>
+            <option value="IN_PROGRESS">In Progress</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
       </div>
@@ -130,35 +274,41 @@ const OrdersHistory = () => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-3">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {order.service}
-                        </h3>
-                        {/* Display individual services if multiple */}
-                        {order.services && order.services.length > 1 && (
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-600 mb-2">Services included:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {order.services.slice(0, 3).map((service, index) => (
-                                <span key={index} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                  {service.name} - ₹{service.price}
-                                </span>
-                              ))}
-                              {order.services.length > 3 && (
-                                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                  +{order.services.length - 3} more
+                        {(() => {
+                          const serviceInfo = getOrderServiceInfo(order);
+                          return (
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900">
+                                {serviceInfo.isMultipleServices ? (
+                                  <>Multiple Services ({serviceInfo.serviceCount} items)</>
+                                ) : (
+                                  serviceInfo.primaryServiceName
+                                )}
+                              </h3>
+                              <p className="text-sm text-gray-600 mt-1">
+                                {serviceInfo.isMultipleServices ? (
+                                  serviceInfo.allServiceNames
+                                ) : (
+                                  serviceInfo.primaryServiceCategory
+                                )}
+                              </p>
+                              {/* Add a small indicator showing data source */}
+                              {serviceInfo.services && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
+                                  ✓ Cart Data Available
                                 </span>
                               )}
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                       <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                          statusColors[order.status]
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                          ORDER_STATUS_COLORS[order.status] || 'bg-gray-100 text-gray-800'
                         }`}
                       >
                         {getStatusIcon(order.status)}
-                        <span className="ml-1">{order.status}</span>
+                        <span className="ml-1">{ORDER_STATUS_DISPLAY[order.status] || order.status}</span>
                       </span>
                     </div>
                   </div>
@@ -166,31 +316,31 @@ const OrdersHistory = () => {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
                   <div>
-                    <span className="font-medium">Order ID:</span>
-                    <p className="text-gray-900">{order.id}</p>
+                    <span className="font-medium">Order Number:</span>
+                    <p className="text-gray-900">{order.orderNumber}</p>
                   </div>
                   <div>
                     <span className="font-medium">Date:</span>
-                    <p className="text-gray-900">{formatDate(order.date)}</p>
+                    <p className="text-gray-900">{formatDate(order.createdAt)}</p>
                   </div>
                   <div>
                     <span className="font-medium">Price:</span>
-                    <p className="text-gray-900 font-semibold">{formatPrice(order.price)}</p>
+                    <p className="text-gray-900 font-semibold">{formatPrice(order.totalPrice)}</p>
                   </div>
                   <div>
                     <span className="font-medium">Technician:</span>
-                    <p className="text-gray-900">{order.technician}</p>
+                    <p className="text-gray-900">{order.technician ? order.technician.name || 'Assigned' : 'Not Assigned'}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 mt-4">
                   <button
-                    onClick={() => setSelectedOrder(order)}
-                    className="px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                    onClick={() => setSelectedOrderNumber(order.orderNumber)}
+                    className="px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors font-medium"
                   >
                     View Details
                   </button>
-                  {order.status === 'Pending' && (
+                  {order.status === 'PENDING' && (
                     <button
                       onClick={() => setShowCancelConfirmation(order.id)}
                       className="px-4 py-2 text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors font-medium"
@@ -206,179 +356,12 @@ const OrdersHistory = () => {
         </div>
       )}
 
-      {/* Order Details Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Order Details</h3>
-                <button
-                  onClick={() => setSelectedOrder(null)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Order Header */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-lg font-semibold text-gray-900">{selectedOrder.service}</h4>
-                    <span
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${
-                        statusColors[selectedOrder.status]
-                      }`}
-                    >
-                      {getStatusIcon(selectedOrder.status)}
-                      <span className="ml-1">{selectedOrder.status}</span>
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600">Order ID: {selectedOrder.id}</p>
-                </div>
-
-                {/* Order Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h5 className="font-medium text-gray-900 mb-2">Service Information</h5>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Service:</span>
-                        <span className="text-gray-900">{selectedOrder.service}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Date:</span>
-                        <span className="text-gray-900">{formatDate(selectedOrder.date)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Price:</span>
-                        <span className="text-gray-900 font-semibold">{formatPrice(selectedOrder.price)}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h5 className="font-medium text-gray-900 mb-2">Assignment Details</h5>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Technician:</span>
-                        <span className="text-gray-900">{selectedOrder.technician}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Status:</span>
-                        <span className="text-gray-900">{selectedOrder.status}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Detailed Services List */}
-                {selectedOrder.services && selectedOrder.services.length > 1 && (
-                  <div>
-                    <h5 className="font-medium text-gray-900 mb-3">Services Breakdown</h5>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="space-y-3">
-                        {selectedOrder.services.map((service, index) => (
-                          <div key={index} className="flex items-center justify-between py-2 border-b border-gray-200 last:border-b-0">
-                            <div className="flex items-center">
-                              <div className="w-2 h-2 bg-blue-500 rounded-full mr-3 flex-shrink-0"></div>
-                              <span className="text-sm font-medium text-gray-900">{service.name}</span>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-900">{formatPrice(service.price)}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-300">
-                        <span className="text-sm font-semibold text-gray-900">Total Amount:</span>
-                        <span className="text-lg font-bold text-blue-600">{formatPrice(selectedOrder.price)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Service Address */}
-                <div>
-                  <h5 className="font-medium text-gray-900 mb-2">Service Address</h5>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-sm text-gray-900">{selectedOrder.address}</p>
-                  </div>
-                </div>
-
-                {/* Status Progress */}
-                <div>
-                  <h5 className="font-medium text-gray-900 mb-3">Order Progress</h5>
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        ['Pending', 'In Progress', 'Completed'].includes(selectedOrder.status)
-                          ? 'bg-blue-500'
-                          : 'bg-gray-300'
-                      }`}></div>
-                      <span className="ml-2 text-sm text-gray-600">Pending</span>
-                    </div>
-                    <div className={`flex-1 h-1 ${
-                      ['In Progress', 'Completed'].includes(selectedOrder.status)
-                        ? 'bg-blue-500'
-                        : 'bg-gray-300'
-                    }`}></div>
-                    <div className="flex items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        ['In Progress', 'Completed'].includes(selectedOrder.status)
-                          ? 'bg-blue-500'
-                          : 'bg-gray-300'
-                      }`}></div>
-                      <span className="ml-2 text-sm text-gray-600">In Progress</span>
-                    </div>
-                    <div className={`flex-1 h-1 ${
-                      selectedOrder.status === 'Completed'
-                        ? 'bg-green-500'
-                        : 'bg-gray-300'
-                    }`}></div>
-                    <div className="flex items-center">
-                      <div className={`w-3 h-3 rounded-full ${
-                        selectedOrder.status === 'Completed'
-                          ? 'bg-green-500'
-                          : 'bg-gray-300'
-                      }`}></div>
-                      <span className="ml-2 text-sm text-gray-600">Completed</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex justify-end space-x-3 pt-6 border-t">
-                  <button
-                    onClick={() => setSelectedOrder(null)}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Close
-                  </button>
-                  {selectedOrder.status === 'Completed' && (
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                      Leave Review
-                    </button>
-                  )}
-                  {selectedOrder.status === 'Pending' && (
-                    <button 
-                      onClick={() => {
-                        setShowCancelConfirmation(selectedOrder.id);
-                        setSelectedOrder(null);
-                      }}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                      disabled={cancellingOrderId === selectedOrder.id}
-                    >
-                      {cancellingOrderId === selectedOrder.id ? 'Cancelling...' : 'Cancel Order'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* New Order Details Modal using API */}
+      <OrderDetailsViewModal
+        isOpen={!!selectedOrderNumber}
+        onClose={() => setSelectedOrderNumber('')}
+        orderNumber={selectedOrderNumber}
+      />
       
       {/* Cancel Order Confirmation Modal */}
       {showCancelConfirmation && (

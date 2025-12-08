@@ -15,6 +15,7 @@ const MOCK_USER_DATA = {
   name: 'Alam Khan',
   email: 'alam@example.com',
   phone: '+91 9876500000',
+  city: 'Mumbai',
   addresses: [
     {
       id: '1',
@@ -113,6 +114,7 @@ interface User {
   name: string;
   email: string;
   phone: string;
+  city?: string; // Add city field
   addresses: Address[];
   orders: Order[];
   paymentMethods: PaymentMethod[];
@@ -127,6 +129,9 @@ interface Address {
   state: string;
   zipCode: string;
   isDefault: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  fullAddress?: string;
 }
 
 interface OrderService {
@@ -179,11 +184,21 @@ interface AuthContextType {
   isLoading: boolean;
   login: (mobileOrEmail: string, password: string) => Promise<boolean>;
   signup: (signupData: SignupData) => Promise<boolean>;
+  // New signup flow methods
+  sendSignupOTP: (mobile: string) => Promise<{ success: boolean; data?: any; message: string }>;
+  verifySignupOTP: (mobile: string, otpCode: string) => Promise<{ success: boolean; data?: any; message: string }>;
+  completeSignup: (signupData: { mobile: string; name: string; email: string; password: string; city: string }) => Promise<{ success: boolean; data?: any; message: string }>;
+  // New login OTP flow methods
+  sendLoginOTP: (mobile: string) => Promise<{ success: boolean; data?: any; message: string }>;
+  verifyLoginOTP: (mobile: string, otpCode: string) => Promise<{ success: boolean; data?: any; message: string }>;
+  // User profile update method
+  updateUserProfile: (profileData: { name: string; email: string; city: string }) => Promise<{ success: boolean; data?: any; message: string }>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   changePassword: (oldPassword: string, newPassword: string) => Promise<boolean>;
   addOrder: (orderData: { services: { name: string; price: number }[], totalAmount: number, selectedAddress?: Address }) => Promise<string>;
   addAddress: (addressData: Omit<Address, 'id'>) => Promise<boolean>;
+  fetchUserAddresses: () => Promise<void>;
   cancelOrder: (orderId: string) => Promise<boolean>;
 }
 
@@ -235,16 +250,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const token = localStorage.getItem('auth_token');
         if (token) {
           try {
-            // Verify token with backend
-            const result = await apiService.getCurrentUser();
+            // Verify token and get detailed user data including city field
+            const result = await apiService.getUserProfileDetails();
             if (result.success && result.data) {
-              const userData = result.data as User;
+              // Transform API response to match User interface
+              const userData = {
+                id: result.data.id.toString(),
+                username: result.data.phone,
+                name: result.data.name,
+                email: result.data.email,
+                phone: result.data.phone,
+                city: result.data.city || '',
+                addresses: [],
+                orders: [],
+                paymentMethods: [],
+                invoices: []
+              } as User;
               setUser(userData);
               setIsLoggedIn(true);
               // Also save to localStorage for Header component compatibility
               localStorage.setItem('repairapp_user', JSON.stringify(userData));
               localStorage.setItem('repairapp_authenticated', 'true');
-              console.log('Restored user session from backend token');
+              console.log('Restored user session from backend token with city:', userData.city);
+              
+              // Load user addresses after setting user
+              await loadUserAddresses(userData);
             } else {
               // Token invalid, clear it
               apiService.setToken(null);
@@ -268,9 +298,125 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializeAuth();
   }, []);
 
+  // Helper function to load user addresses
+  const loadUserAddresses = async (userData: User) => {
+    try {
+      const result = await apiService.getUserAddresses();
+      if (result.success && result.data) {
+        const apiAddresses = result.data.map(addr => ({
+          id: addr.id.toString(),
+          type: addr.type,
+          address: addr.address,
+          city: addr.city,
+          state: addr.state,
+          zipCode: addr.zipCode,
+          isDefault: addr.isDefault,
+          createdAt: addr.createdAt,
+          updatedAt: addr.updatedAt,
+          fullAddress: addr.fullAddress
+        }));
+        
+        const updatedUser = { ...userData, addresses: apiAddresses };
+        setUser(updatedUser);
+        
+        // Update localStorage
+        localStorage.setItem('repairapp_user', JSON.stringify(updatedUser));
+        
+        console.log('Loaded user addresses:', apiAddresses);
+      }
+    } catch (error) {
+      console.error('Failed to load user addresses:', error);
+    }
+  };
+
+  // Fetch user addresses method
+  const fetchUserAddresses = async () => {
+    if (user) {
+      await loadUserAddresses(user);
+    }
+  };
+
   const login = async (mobileOrEmail: string, password: string): Promise<boolean> => {
     try {
-      // Check if it's demo credentials first (for development)
+      // Try real backend login first
+      try {
+        const result = await apiService.login(mobileOrEmail, password);
+        
+        if (result.success && result.data) {
+          // After successful login, fetch detailed user data including city
+          try {
+            const userDetailsResult = await apiService.getUserProfileDetails();
+            if (userDetailsResult.success && userDetailsResult.data) {
+              // Transform API response to user data format with all details
+              const userData = {
+                id: userDetailsResult.data.id.toString(),
+                username: userDetailsResult.data.phone,
+                name: userDetailsResult.data.name,
+                email: userDetailsResult.data.email,
+                phone: userDetailsResult.data.phone,
+                city: userDetailsResult.data.city || '',
+                addresses: [],
+                orders: [],
+                paymentMethods: [],
+                invoices: []
+              };
+              
+              setUser(userData);
+              setIsLoggedIn(true);
+              
+              // Persist user data for page refresh compatibility
+              localStorage.setItem('repairapp_user', JSON.stringify(userData));
+              localStorage.setItem('repairapp_authenticated', 'true');
+              localStorage.setItem('repairapp_login_time', Date.now().toString());
+              
+              // Load user addresses after successful login
+              await loadUserAddresses(userData);
+              
+              // Dispatch auth change event
+              window.dispatchEvent(new CustomEvent('authChanged', { 
+                detail: { type: 'login', user: userData } 
+              }));
+              
+              console.log('Login successful with city data:', userData.city);
+              return true;
+            }
+          } catch (userDetailsError) {
+            console.warn('Failed to fetch user details after login, using basic data:', userDetailsError);
+            // Fallback to basic user data from login response
+            const userData = {
+              id: result.data.id.toString(),
+              username: result.data.phone,
+              name: result.data.name,
+              email: result.data.email,
+              phone: result.data.phone,
+              city: '',
+              addresses: [],
+              orders: [],
+              paymentMethods: [],
+              invoices: []
+            };
+            
+            setUser(userData);
+            setIsLoggedIn(true);
+            
+            // Persist user data for page refresh compatibility
+            localStorage.setItem('repairapp_user', JSON.stringify(userData));
+            localStorage.setItem('repairapp_authenticated', 'true');
+            localStorage.setItem('repairapp_login_time', Date.now().toString());
+            
+            // Dispatch auth change event
+            window.dispatchEvent(new CustomEvent('authChanged', { 
+              detail: { type: 'login', user: userData } 
+            }));
+            
+            return true;
+          }
+        }
+      } catch (backendError) {
+        console.log('Backend login failed, trying fallback:', backendError);
+      }
+      
+      // Fallback to demo credentials for development
       const isDemoAdmin = mobileOrEmail === DEMO_CREDENTIALS.admin.mobile && password === DEMO_CREDENTIALS.admin.password;
       const isDemoUser = mobileOrEmail === DEMO_CREDENTIALS.user.mobile && password === DEMO_CREDENTIALS.user.password;
       
@@ -282,6 +428,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: 'Demo User',
           email: 'user@example.com',
           phone: '+91 9876543210',
+          city: 'Demo City',
           addresses: [],
           orders: [],
           paymentMethods: [],
@@ -319,6 +466,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           name: localUser.name,
           email: localUser.email,
           phone: `+91 ${localUser.mobile}`,
+          city: localUser.city,
           addresses: [],
           orders: [],
           paymentMethods: [],
@@ -434,16 +582,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const logout = () => {
+    // Clear state immediately
     setUser(null);
     setIsLoggedIn(false);
     
-    // Clear token from API service
-    apiService.logout();
+    // Clear token from API service first
+    apiService.setToken(null);
     
-    // Clear any remaining localStorage items
+    // Clear ALL auth-related localStorage items
+    localStorage.removeItem('auth_token');
     localStorage.removeItem('repairapp_user');
     localStorage.removeItem('repairapp_authenticated');
     localStorage.removeItem('repairapp_login_time');
+    
+    // Call backend logout (async, but don't wait)
+    apiService.logout().catch(err => console.log('Logout API call failed:', err));
     
     // Dispatch auth change event for Header component
     window.dispatchEvent(new CustomEvent('authChanged', { detail: { type: 'logout' } }));
@@ -457,6 +610,51 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     
     // Save to localStorage
     localStorage.setItem('repairapp_user', JSON.stringify(updatedUser));
+  };
+
+  // User profile update method
+  const updateUserProfile = async (profileData: { name: string; email: string; city: string }) => {
+    try {
+      const result = await apiService.updateUserProfile(profileData);
+      
+      if (result.success && result.data) {
+        // Update the user state with the API response data
+        const updatedUserData: User = {
+          ...user!,
+          name: result.data.name,
+          email: result.data.email,
+          phone: result.data.phone,
+          city: result.data.city
+        };
+        
+        setUser(updatedUserData);
+        
+        // Persist updated user data
+        localStorage.setItem('repairapp_user', JSON.stringify(updatedUserData));
+        
+        // Dispatch auth change event for UI synchronization
+        window.dispatchEvent(new CustomEvent('authChanged', { 
+          detail: { type: 'profileUpdate', user: updatedUserData } 
+        }));
+        
+        return {
+          success: true,
+          data: result.data,
+          message: result.message
+        };
+      }
+      
+      return {
+        success: false,
+        message: result.message || 'Failed to update profile'
+      };
+    } catch (error: any) {
+      console.error('Update profile error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to update profile'
+      };
+    }
   };
 
   const changePassword = async (oldPassword: string, newPassword: string): Promise<boolean> => {
@@ -518,41 +716,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const addAddress = async (addressData: Omit<Address, 'id'>): Promise<boolean> => {
     if (!user) throw new Error('User not logged in');
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Generate address ID
-    const addressCount = user.addresses.length + 1;
-    const addressId = addressCount.toString();
-    
-    // Create new address
-    const newAddress: Address = {
-      id: addressId,
-      ...addressData
-    };
-    
-    // If this is the first address or marked as default, make it default
-    let updatedAddresses = [...user.addresses];
-    
-    if (addressData.isDefault || user.addresses.length === 0) {
-      // Remove default from other addresses
-      updatedAddresses = updatedAddresses.map(addr => ({ ...addr, isDefault: false }));
-      newAddress.isDefault = true;
+    try {
+      console.log('[AuthContext] Adding address with data:', addressData);
+      
+      // Use real API to add address
+      const result = await apiService.addUserAddress({
+        type: addressData.type,
+        address: addressData.address,
+        city: addressData.city,
+        state: addressData.state,
+        zipCode: addressData.zipCode,
+        isDefault: addressData.isDefault || false
+      });
+      
+      console.log('[AuthContext] Add address result:', result);
+      
+      if (result.success) {
+        // Refresh addresses from API
+        console.log('[AuthContext] Address added successfully, refreshing addresses...');
+        await loadUserAddresses(user);
+        return true;
+      } else {
+        console.error('[AuthContext] API returned failure:', result.message);
+        throw new Error(result.message || 'Failed to add address');
+      }
+    } catch (error: any) {
+      console.error('[AuthContext] Error adding address:', {
+        error: error.message,
+        stack: error.stack,
+        addressData: addressData
+      });
+      
+      // Provide more specific error messages
+      if (error.message.includes('401') || error.message.includes('Authentication')) {
+        throw new Error('Please login again to add addresses');
+      } else if (error.message.includes('400') || error.message.includes('Invalid')) {
+        throw new Error('Invalid address data. Please check all fields are filled correctly.');
+      } else if (error.message.includes('403')) {
+        throw new Error('Permission denied. Please contact support.');
+      } else if (error.message.includes('500')) {
+        throw new Error('Server error. Please try again later.');
+      } else {
+        throw new Error(error.message || 'Failed to add address. Please try again.');
+      }
     }
-    
-    // Add new address
-    updatedAddresses.push(newAddress);
-    
-    // Update user with new address
-    const updatedUser = {
-      ...user,
-      addresses: updatedAddresses
-    };
-    
-    setUser(updatedUser);
-    localStorage.setItem('repairapp_user', JSON.stringify(updatedUser));
-    
-    return true;
   };
 
   const cancelOrder = async (orderId: string): Promise<boolean> => {
@@ -593,18 +800,276 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return true;
   };
 
+  // New signup flow methods
+  const sendSignupOTP = async (mobile: string) => {
+    try {
+      const result = await apiService.sendSignupMobileOTP(mobile);
+      return {
+        success: result.success,
+        data: result.data,
+        message: result.message
+      };
+    } catch (error: any) {
+      console.error('Send signup OTP error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to send OTP'
+      };
+    }
+  };
+
+  // New login OTP flow methods
+  const sendLoginOTP = async (mobile: string) => {
+    try {
+      const result = await apiService.sendLoginOTP(mobile);
+      return {
+        success: result.success,
+        data: result.data,
+        message: result.message
+      };
+    } catch (error: any) {
+      console.error('Send login OTP error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to send login OTP'
+      };
+    }
+  };
+
+  const verifyLoginOTP = async (mobile: string, otpCode: string) => {
+    try {
+      const result = await apiService.verifyLoginOTP(mobile, otpCode);
+      
+      if (result.success && result.data) {
+        // After successful OTP login, fetch detailed user data including city
+        try {
+          const userDetailsResult = await apiService.getUserProfileDetails();
+          if (userDetailsResult.success && userDetailsResult.data) {
+            // Transform API response to user data format with all details
+            const userData = {
+              id: userDetailsResult.data.id.toString(),
+              username: userDetailsResult.data.phone,
+              name: userDetailsResult.data.name,
+              email: userDetailsResult.data.email,
+              phone: userDetailsResult.data.phone,
+              city: userDetailsResult.data.city || '',
+              addresses: [],
+              orders: [],
+              paymentMethods: [],
+              invoices: []
+            };
+            
+            // Update context state
+            setUser(userData);
+            setIsLoggedIn(true);
+            
+            // Persist user data
+            localStorage.setItem('repairapp_user', JSON.stringify(userData));
+            localStorage.setItem('repairapp_authenticated', 'true');
+            localStorage.setItem('repairapp_login_time', Date.now().toString());
+            
+            // Dispatch auth change event
+            window.dispatchEvent(new CustomEvent('authChanged', { 
+              detail: { type: 'login', user: userData } 
+            }));
+            
+            console.log('OTP login successful with city data:', userData.city);
+            return {
+              success: true,
+              data: { user: userData, tokens: result.data },
+              message: result.message
+            };
+          }
+        } catch (userDetailsError) {
+          console.warn('Failed to fetch user details after OTP login, using basic data:', userDetailsError);
+        }
+        
+        // Fallback to basic user data from OTP login response
+        const userData = {
+          id: result.data.id.toString(),
+          username: result.data.phone,
+          name: result.data.name,
+          email: result.data.email,
+          phone: result.data.phone,
+          city: '',
+          addresses: [],
+          orders: [],
+          paymentMethods: [],
+          invoices: []
+        };
+        
+        // Update context state
+        setUser(userData);
+        setIsLoggedIn(true);
+        
+        // Persist user data
+        localStorage.setItem('repairapp_user', JSON.stringify(userData));
+        localStorage.setItem('repairapp_authenticated', 'true');
+        localStorage.setItem('repairapp_login_time', Date.now().toString());
+        
+        // Dispatch auth change event
+        window.dispatchEvent(new CustomEvent('authChanged', { 
+          detail: { type: 'login', user: userData } 
+        }));
+        
+        return {
+          success: true,
+          data: { user: userData, tokens: result.data },
+          message: result.message
+        };
+      }
+      
+      return {
+        success: false,
+        message: result.message || 'OTP verification failed'
+      };
+    } catch (error: any) {
+      console.error('Verify login OTP error:', error);
+      return {
+        success: false,
+        message: error.message || 'OTP verification failed'
+      };
+    }
+  };
+
+  const verifySignupOTP = async (mobile: string, otpCode: string) => {
+    try {
+      const result = await apiService.verifySignupOTP(mobile, otpCode);
+      return {
+        success: result.success,
+        data: result.data,
+        message: result.message
+      };
+    } catch (error: any) {
+      console.error('Verify signup OTP error:', error);
+      return {
+        success: false,
+        message: error.message || 'OTP verification failed'
+      };
+    }
+  };
+
+  const completeSignup = async (signupData: { mobile: string; name: string; email: string; password: string; city: string }) => {
+    try {
+      const result = await apiService.completeSignup(signupData);
+      
+      if (result.success && result.data) {
+        // Handle successful registration with tokens
+        const { user: apiUser, tokens } = result.data;
+        
+        // After successful registration, fetch detailed user data including city
+        try {
+          const userDetailsResult = await apiService.getUserProfileDetails();
+          if (userDetailsResult.success && userDetailsResult.data) {
+            // Create user data from detailed API response
+            const userData = {
+              id: userDetailsResult.data.id.toString(),
+              username: userDetailsResult.data.phone,
+              name: userDetailsResult.data.name,
+              email: userDetailsResult.data.email,
+              phone: userDetailsResult.data.phone,
+              city: userDetailsResult.data.city || '',
+              addresses: [],
+              orders: [],
+              paymentMethods: [],
+              invoices: []
+            };
+            
+            // Update context state
+            setUser(userData);
+            setIsLoggedIn(true);
+            
+            // Persist user data
+            localStorage.setItem('repairapp_user', JSON.stringify(userData));
+            localStorage.setItem('repairapp_authenticated', 'true');
+            localStorage.setItem('repairapp_login_time', Date.now().toString());
+            
+            // Dispatch auth change event
+            window.dispatchEvent(new CustomEvent('authChanged', { 
+              detail: { type: 'login', user: userData } 
+            }));
+            
+            console.log('Signup successful with city data:', userData.city);
+            return {
+              success: true,
+              data: { user: userData, tokens },
+              message: result.message
+            };
+          }
+        } catch (userDetailsError) {
+          console.warn('Failed to fetch user details after signup, using registration data:', userDetailsError);
+        }
+        
+        // Fallback to data from registration response
+        const userData = {
+          id: apiUser.id.toString(),
+          username: apiUser.mobile,
+          name: apiUser.name,
+          email: apiUser.email,
+          phone: apiUser.mobile,
+          city: apiUser.city || '',
+          addresses: [],
+          orders: [],
+          paymentMethods: [],
+          invoices: []
+        };
+        
+        // Update context state
+        setUser(userData);
+        setIsLoggedIn(true);
+        
+        // Persist user data
+        localStorage.setItem('repairapp_user', JSON.stringify(userData));
+        localStorage.setItem('repairapp_authenticated', 'true');
+        localStorage.setItem('repairapp_login_time', Date.now().toString());
+        
+        // Dispatch auth change event
+        window.dispatchEvent(new CustomEvent('authChanged', { 
+          detail: { type: 'login', user: userData } 
+        }));
+        
+        return {
+          success: true,
+          data: { user: userData, tokens },
+          message: result.message
+        };
+      }
+      
+      return {
+        success: false,
+        message: result.message || 'Registration failed'
+      };
+    } catch (error: any) {
+      console.error('Complete signup error:', error);
+      return {
+        success: false,
+        message: error.message || 'Registration failed'
+      };
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isLoggedIn,
     isLoading,
     login,
     signup,
+    // New signup flow methods
+    sendSignupOTP,
+    verifySignupOTP,
+    completeSignup,
+    // New login OTP flow methods
+    sendLoginOTP,
+    verifyLoginOTP,
+    // User profile update method
+    updateUserProfile,
     logout,
     updateUser,
     changePassword,
     addOrder,
     addAddress,
-    cancelOrder
+    fetchUserAddresses,
+    cancelOrder,
   };
 
   return (

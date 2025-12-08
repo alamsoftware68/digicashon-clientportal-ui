@@ -9,14 +9,21 @@ import DigiCashOnPromise from '@/components/DigiCashOnPromise';
 import ViewDetailsButton from '@/components/ViewDetailsButton';
 import LoginModal from '@/components/LoginModal';
 import AddressSelectionModal from '@/components/AddressSelectionModal';
+import OrderDetailsModal from '@/components/OrderDetailsModal';
 import { useAuth, Address } from '@/contexts/AuthContext';
+import { useCart } from '@/contexts/CartContext';
+import apiService from '@/services/api';
+import { UIServiceCategory, UIServiceItem, transformServiceCategories } from '@/types/service-categories';
+import { CreateOrderRequest, PlaceOrderRequest } from '@/types/orders';
 
+// Legacy interfaces for backward compatibility
 interface ServiceItem {
+  id: number;
   name: string;
   price: number;
-  description?: string;
+  description: string;
   image?: string;
-  features?: string[];
+  features: string[];
   badge?: string;
 }
 
@@ -26,267 +33,77 @@ interface ServiceCategory {
   icon: string;
   services: ServiceItem[];
   bulletPoints: string[];
+  description: string;
 }
 
 const LaptopRepairPage = () => {
-  const { isLoggedIn, addOrder } = useAuth();
+  const { isLoggedIn, addOrder, user } = useAuth();
+  const { 
+    cartItems, 
+    cartSummary, 
+    isLoading: isCartLoading, 
+    addItemToCart, 
+    removeItemFromCart, 
+    updateItemQuantity,
+    clearCart,
+    isServiceInCart,
+    getCartTotal,
+    getCartItemCount
+  } = useCart();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>('home-visit');
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<ServiceCategory | null>(null);
-  const [cart, setCart] = useState<Array<{ name: string; price: number }>>([]);
+  const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
 
-  // Load cart from localStorage on mount
+  // Load service categories from API
   useEffect(() => {
-    const savedCart = localStorage.getItem('repairapp_cart');
-    if (savedCart) {
+    const fetchServiceCategories = async () => {
       try {
-        const cartData = JSON.parse(savedCart);
-        setCart(cartData);
-        console.log('[Cart] Loaded cart from localStorage:', cartData);
+        setIsLoadingCategories(true);
+        setCategoriesError(null);
+        console.log('[Categories] Fetching service categories from API...');
+        
+        const response = await apiService.getServiceCategories();
+        
+        if (response.success && response.data) {
+          const transformedCategories = transformServiceCategories(response.data);
+          setServiceCategories(transformedCategories);
+          
+          // Set first category as active by default
+          if (transformedCategories.length > 0) {
+            setActiveTab(transformedCategories[0].id);
+          }
+          
+          console.log('[Categories] Successfully loaded', transformedCategories.length, 'categories');
+        } else {
+          throw new Error(response.message || 'Failed to fetch service categories');
+        }
       } catch (error) {
-        console.error('[Cart] Failed to parse saved cart:', error);
-        localStorage.removeItem('repairapp_cart');
+        console.error('[Categories] Error fetching service categories:', error);
+        setCategoriesError(error instanceof Error ? error.message : 'Failed to load service categories');
+        
+        // Fallback to empty array to prevent app crash
+        setServiceCategories([]);
+      } finally {
+        setIsLoadingCategories(false);
       }
-    }
+    };
+    
+    fetchServiceCategories();
   }, []);
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    if (cart.length > 0) {
-      localStorage.setItem('repairapp_cart', JSON.stringify(cart));
-      console.log('[Cart] Saved cart to localStorage:', cart);
-    } else {
-      localStorage.removeItem('repairapp_cart');
-      console.log('[Cart] Cleared cart from localStorage');
-    }
-  }, [cart]);
+  // Cart is now managed by CartContext - no localStorage management needed
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [isBookingInProgress, setIsBookingInProgress] = useState<boolean>(false);
   const [showOrderSuccess, setShowOrderSuccess] = useState<boolean>(false);
   const [lastOrderId, setLastOrderId] = useState<string>('');
   const [lastOrderAmount, setLastOrderAmount] = useState<number>(0);
   const [isAddressSelectionOpen, setIsAddressSelectionOpen] = useState<boolean>(false);
+  const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState<boolean>(false);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
-
-  // Service categories data with attractive visuals and features
-  const serviceCategories: ServiceCategory[] = [
-    {
-      id: 'home-visit',
-      name: 'Home Visit',
-      icon: '🏠',
-      bulletPoints: [
-        'Certified technicians at your doorstep',
-        'Enhances speed, cooling & battery efficiency'
-      ],
-      services: [
-        { 
-          name: 'Windows Laptop', 
-          price: 499, 
-          description: 'Complete diagnosis and service at your home with certified technicians',
-          image: '/images/laptop-repair-1.jpg',
-          badge: 'Popular',
-          features: ['Free Diagnosis', 'Same Day Service', '90 Days Warranty', 'Certified Technicians']
-        },
-        { 
-          name: 'Desktop', 
-          price: 399, 
-          description: 'Professional desktop service and maintenance at your location',
-          image: '/images/laptop-repair-2.jpg',
-          features: ['Hardware Check', 'Cleaning Service', '60 Days Warranty', 'Data Protection']
-        },
-        { 
-          name: 'MacBook', 
-          price: 999, 
-          description: 'Specialized MacBook service and repair by Apple certified experts',
-          image: '/images/laptop-repair-3.jpg',
-          badge: 'Premium',
-          features: ['Apple Certified', 'Original Parts', '180 Days Warranty', 'Data Recovery']
-        }
-      ]
-    },
-    {
-      id: 'repair',
-      name: 'Repair',
-      icon: '🔧',
-      bulletPoints: [
-        'Expert diagnosis and fixing',
-        'High-quality parts and service'
-      ],
-      services: [
-        { 
-          name: 'Software Issue', 
-          price: 799, 
-          description: 'OS problems, virus removal, software conflicts and system optimization',
-          image: '/images/laptop-repair-4.jpg',
-          features: ['Virus Removal', 'OS Repair', 'Software Fix', 'Performance Boost']
-        },
-        { 
-          name: 'Charging Issue', 
-          price: 899, 
-          description: 'Battery replacement, charging port repair and power management',
-          image: '/images/Laptop-service.jpg',
-          badge: 'Quick Fix',
-          features: ['Battery Test', 'Port Repair', 'Power Optimization', 'Genuine Parts']
-        },
-        { 
-          name: 'Display Issue', 
-          price: 1499, 
-          description: 'Screen replacement, display problems and LCD/LED repair',
-          image: '/images/laptop-repair-1.jpg',
-          features: ['Screen Replacement', 'Color Calibration', 'Brightness Fix', 'HD Quality']
-        },
-        { 
-          name: 'Keyboard Issue', 
-          price: 699, 
-          description: 'Key replacement, keyboard repair and functionality restoration',
-          image: '/images/laptop-repair-2.jpg',
-          features: ['Key Replacement', 'Backlight Fix', 'Deep Cleaning', 'Full Testing']
-        },
-        { 
-          name: 'Overheating Issue', 
-          price: 899, 
-          description: 'Fan cleaning, thermal management and cooling system optimization',
-          image: '/images/laptop-repair-3.jpg',
-          features: ['Fan Cleaning', 'Thermal Paste', 'Vent Cleaning', 'Temperature Monitor']
-        },
-        { 
-          name: 'Physical Damage', 
-          price: 1999, 
-          description: 'Body damage repair, structural fixes and cosmetic restoration',
-          image: '/images/laptop-repair-4.jpg',
-          badge: 'Expert Care',
-          features: ['Body Repair', 'Hinge Fix', 'Cosmetic Restore', 'Structural Support']
-        },
-        { 
-          name: 'Port Issue', 
-          price: 699, 
-          description: 'USB, HDMI, audio and other port repairs with genuine components',
-          image: '/images/Laptop-service.jpg',
-          features: ['Port Replacement', 'Connection Test', 'Genuine Parts', 'Full Functionality']
-        },
-        { 
-          name: 'Slow Performance', 
-          price: 799, 
-          description: 'System optimization, speed improvement and performance enhancement',
-          image: '/images/laptop-repair-1.jpg',
-          badge: 'Speed Boost',
-          features: ['System Cleanup', 'Registry Fix', 'Startup Optimization', 'RAM Upgrade']
-        },
-        { 
-          name: 'Speaker Issue', 
-          price: 699, 
-          description: 'Audio problems, speaker replacement and sound system repair',
-          image: '/images/laptop-repair-2.jpg',
-          features: ['Speaker Fix', 'Audio Drivers', 'Sound Quality', 'Volume Control']
-        },
-        { 
-          name: 'Touchpad Issue', 
-          price: 599, 
-          description: 'Trackpad repair, sensitivity adjustment and functionality restoration',
-          image: '/images/laptop-repair-3.jpg',
-          features: ['Touchpad Repair', 'Sensitivity Fix', 'Gesture Control', 'Driver Update']
-        },
-        { 
-          name: 'Unknown Issue', 
-          price: 1299, 
-          description: 'Complete diagnostic service to identify and resolve any laptop problem',
-          image: '/images/laptop-repair-4.jpg',
-          badge: 'Full Diagnostic',
-          features: ['Complete Diagnosis', 'Problem Identification', 'Expert Solution', 'Detailed Report']
-        }
-      ]
-    },
-    {
-      id: 'laptop-desktop-service',
-      name: 'Laptop/Desktop Service',
-      icon: '💻',
-      bulletPoints: [
-        'Comprehensive hardware and software support',
-        'Boost performance with professional servicing'
-      ],
-      services: [
-        { 
-          name: 'Basic Service', 
-          price: 699, 
-          description: 'Essential cleaning and basic maintenance for optimal performance',
-          image: '/images/Laptop-service.jpg',
-          features: ['External Cleaning', 'Basic Maintenance', 'Software Update', '30 Days Support']
-        },
-        { 
-          name: 'Advanced Service', 
-          price: 1299, 
-          description: 'Deep cleaning, performance optimization and comprehensive maintenance',
-          image: '/images/laptop-repair-1.jpg',
-          badge: 'Recommended',
-          features: ['Deep Cleaning', 'Performance Tuning', 'System Optimization', '90 Days Warranty']
-        },
-        { 
-          name: 'Gaming Laptop Service', 
-          price: 1599, 
-          description: 'Specialized maintenance for gaming laptops with performance enhancement',
-          image: '/images/laptop-repair-2.jpg',
-          badge: 'Gaming Pro',
-          features: ['GPU Optimization', 'Cooling Enhancement', 'Performance Mode', 'Gaming Support']
-        },
-        { 
-          name: 'Business Laptop Service', 
-          price: 999, 
-          description: 'Professional laptop service package for business and enterprise needs',
-          image: '/images/laptop-repair-3.jpg',
-          features: ['Security Setup', 'Data Protection', 'Professional Tools', 'Business Support']
-        }
-      ]
-    },
-    {
-      id: 'add-on-service',
-      name: 'Add-On Service',
-      icon: '➕',
-      bulletPoints: [
-        'Extra services for enhanced device care',
-        'Customize repairs with additional options'
-      ],
-      services: [
-        { 
-          name: 'Data Recovery', 
-          price: 1999, 
-          description: 'Professional data recovery from damaged or corrupted storage devices',
-          image: '/images/laptop-repair-4.jpg',
-          badge: 'Data Safe',
-          features: ['File Recovery', 'Drive Repair', '99% Success Rate', 'Secure Process']
-        },
-        { 
-          name: 'Software Installation', 
-          price: 299, 
-          description: 'Operating system installation, software setup and driver configuration',
-          image: '/images/Laptop-service.jpg',
-          features: ['OS Installation', 'Driver Setup', 'Software Config', 'License Activation']
-        },
-        { 
-          name: 'Hardware Upgrade', 
-          price: 799, 
-          description: 'RAM, SSD, and other component upgrades to boost performance',
-          image: '/images/laptop-repair-1.jpg',
-          badge: 'Performance+',
-          features: ['RAM Upgrade', 'SSD Installation', 'Component Replacement', 'Compatibility Check']
-        },
-        { 
-          name: 'Antivirus Setup', 
-          price: 399, 
-          description: 'Security software installation, configuration and system protection',
-          image: '/images/laptop-repair-2.jpg',
-          features: ['Antivirus Install', 'Security Config', 'Threat Removal', 'Protection Setup']
-        },
-        { 
-          name: 'System Backup', 
-          price: 499, 
-          description: 'Complete system backup and restore setup for data protection',
-          image: '/images/laptop-repair-3.jpg',
-          features: ['Full Backup', 'Restore Setup', 'Cloud Integration', 'Automated Schedule']
-        }
-      ]
-    }
-  ];
 
   const handleCategoryClick = (category: ServiceCategory) => {
     setSelectedCategory(category);
@@ -298,28 +115,39 @@ const LaptopRepairPage = () => {
     setTimeout(() => setSelectedCategory(null), 300);
   };
 
-  const addToCart = (service: ServiceItem) => {
-    setCart([...cart, { name: service.name, price: service.price }]);
+  const handleAddToCart = async (service: ServiceItem) => {
+    try {
+      await addItemToCart(service.id, 1);
+      console.log(`[Cart] ✅ Added ${service.name} to cart`);
+    } catch (error) {
+      console.error(`[Cart] ❌ Failed to add ${service.name} to cart:`, error);
+      alert('Failed to add item to cart. Please try again.');
+    }
   };
 
-  const removeFromCart = (index: number) => {
-    setCart(cart.filter((_, i) => i !== index));
+  const handleRemoveFromCart = async (cartItemId: number) => {
+    try {
+      await removeItemFromCart(cartItemId);
+      console.log('[Cart] ✅ Item removed from cart');
+    } catch (error) {
+      console.error('[Cart] ❌ Failed to remove item from cart:', error);
+      alert('Failed to remove item from cart. Please try again.');
+    }
   };
 
-  const removeServiceFromCart = (serviceName: string) => {
-    setCart(cart.filter(item => item.name !== serviceName));
+  const removeServiceFromCart = async (serviceName: string) => {
+    const cartItem = cartItems.find(item => item.serviceTitle === serviceName);
+    if (cartItem) {
+      await handleRemoveFromCart(cartItem.id);
+    }
   };
 
-  const isServiceInCart = (serviceName: string) => {
-    return cart.some(item => item.name === serviceName);
-  };
-
-  const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price, 0);
+  const isServiceInCartByName = (serviceName: string) => {
+    return cartItems.some(item => item.serviceTitle === serviceName);
   };
 
   const handleBookNow = async () => {
-    if (cart.length === 0) return;
+    if (getCartItemCount() === 0) return;
 
     if (!isLoggedIn) {
       setIsLoginModalOpen(true);
@@ -330,26 +158,95 @@ const LaptopRepairPage = () => {
     setIsAddressSelectionOpen(true);
   };
 
-  const handleAddressSelected = async (address: Address) => {
+  const handleAddressSelected = (address: Address) => {
     setSelectedAddress(address);
-    
+    setIsAddressSelectionOpen(false);
+    // Now open the order details modal
+    setIsOrderDetailsOpen(true);
+  };
+
+  const handleOrderDetailsConfirm = async (details: { problemDescription: string; customerNotes: string }) => {
+    if (!selectedAddress) {
+      alert('Please select an address first');
+      return;
+    }
+
     try {
       setIsBookingInProgress(true);
-      const totalAmount = getTotalPrice();
-      const orderId = await addOrder({
-        services: cart,
-        totalAmount: totalAmount,
-        selectedAddress: address
+      const totalAmount = getCartTotal();
+      
+      // Transform cart items to the new API format
+      const services = cartItems.map(item => ({
+        serviceId: item.serviceItemId, // Use the actual service item ID from backend
+        name: item.serviceTitle, // Service item name (e.g., "MacBook")
+        categoryName: item.categoryName, // Category name (e.g., "Home Visit")
+        serviceTitle: item.serviceTitle, // Service title (e.g., "MacBook")
+        price: item.unitPrice, // Unit price from cart
+        quantity: item.quantity,
+        notes: item.notes || undefined
+      }));
+      
+      console.log('[Order] Cart items transformation:', {
+        originalCartItems: cartItems.map(item => ({
+          id: item.id,
+          serviceItemId: item.serviceItemId,
+          serviceTitle: item.serviceTitle,
+          categoryName: item.categoryName,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity
+        })),
+        transformedServices: services
       });
       
-      // Clear cart and show success
-      setLastOrderAmount(totalAmount);
-      setCart([]);
-      setLastOrderId(orderId);
-      setShowOrderSuccess(true);
-    } catch (error) {
-      console.error('Error placing order:', error);
-      alert('Failed to place order. Please try again.');
+      // Prepare order request for the new API
+      const orderRequest: CreateOrderRequest = {
+        services: services,
+        addressId: parseInt(selectedAddress.id), // Convert string ID to number for API
+        totalAmount: totalAmount,
+        problemDescription: details.problemDescription,
+        customerNotes: details.customerNotes
+      };
+      
+      console.log('Creating order with new API:', {
+        endpoint: '/orders/create',
+        cartItems: cartItems,
+        transformedServices: services,
+        orderRequest: orderRequest
+      });
+      
+      // Call the new create order API
+      const result = await apiService.createOrder(orderRequest);
+      
+      if (result.success && result.data) {
+        // Extract order details from the new API response
+        const orderAmount = result.data.totalPrice;
+        const orderNumber = result.data.orderNumber;
+        const orderItems = result.data.orderItems || [];
+        
+        setLastOrderAmount(orderAmount);
+        setLastOrderId(orderNumber);
+        await clearCart(); // Clear cart using CartContext
+        setShowOrderSuccess(true);
+        setIsOrderDetailsOpen(false);
+        
+        console.log('✅ Order created successfully with enhanced order items:', {
+          orderNumber: orderNumber,
+          totalAmount: orderAmount,
+          orderItems: orderItems,
+          itemCount: orderItems.length,
+          enhancedFields: {
+            serviceName: orderItems.map(item => item.serviceName),
+            serviceCategory: orderItems.map(item => item.serviceCategory),
+            serviceTitle: orderItems.map(item => item.serviceTitle),
+            serviceItemId: orderItems.map(item => item.serviceItemId)
+          }
+        });
+      } else {
+        throw new Error(result.message || 'Failed to create order');
+      }
+    } catch (error: any) {
+      console.error('Error creating order:', error);
+      alert('Failed to create order: ' + (error.message || 'Please try again.'));
     } finally {
       setIsBookingInProgress(false);
     }
@@ -399,6 +296,55 @@ const LaptopRepairPage = () => {
           
           {/* Service Categories - Main Content */}
           <div className="lg:col-span-3">
+            
+            {/* Loading State */}
+            {isLoadingCategories && (
+              <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+                <div className="text-center">
+                  <div className="relative">
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-6 animate-spin">
+                      <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                    </div>
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-800 mb-2">Loading Services...</h3>
+                  <p className="text-gray-500">Please wait while we fetch the latest service categories</p>
+                  
+                  {/* Loading skeleton */}
+                  <div className="mt-8 space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="bg-gray-100 rounded-lg h-20 animate-pulse"></div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Error State */}
+            {categoriesError && !isLoadingCategories && (
+              <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-8">
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.664-.833-2.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl font-semibold text-red-800 mb-2">Failed to Load Services</h3>
+                  <p className="text-red-600 mb-6">{categoriesError}</p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="bg-gradient-to-r from-red-500 to-pink-500 text-white px-6 py-3 rounded-lg font-semibold hover:from-red-600 hover:to-pink-600 transition-all duration-300 transform hover:scale-105"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Service Categories Content - Only show when loaded and no error */}
+            {!isLoadingCategories && !categoriesError && serviceCategories.length > 0 && (
+            <>
             {/* Enhanced Tab Navigation with Modern Design */}
             <div className="bg-gradient-to-r from-gray-50 via-white to-gray-50 rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
               {/* Tab Header with Gradient */}
@@ -562,6 +508,8 @@ const LaptopRepairPage = () => {
                 </div>
               </div>
             </div>
+            </>
+            )}
           </div>
 
           {/* Right Sidebar - Enhanced Cart */}
@@ -579,10 +527,10 @@ const LaptopRepairPage = () => {
                     </h3>
                     <p className="text-blue-100 text-sm">Selected services</p>
                   </div>
-                  {cart.length > 0 && (
+                  {getCartItemCount() > 0 && (
                     <div className="bg-white/20 backdrop-blur-sm rounded-full px-3 py-1">
                       <span className="text-white font-bold text-sm">
-                        {cart.length} item{cart.length > 1 ? 's' : ''}
+                        {getCartItemCount()} item{getCartItemCount() > 1 ? 's' : ''}
                       </span>
                     </div>
                   )}
@@ -594,7 +542,7 @@ const LaptopRepairPage = () => {
               
               {/* Container sized to show exactly 2 items at a time */}
               <div className="h-[500px] flex flex-col">
-                {cart.length === 0 ? (
+                {getCartItemCount() === 0 ? (
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center">
                       <div className="relative">
@@ -619,8 +567,8 @@ const LaptopRepairPage = () => {
                   <>
                     {/* Scrollable cart items - height adjusted to show 2 items */}
                     <div className="h-[240px] overflow-y-auto space-y-3 pr-2 scrollbar-thin scrollbar-thumb-blue-200 scrollbar-track-gray-50">
-                      {cart.map((item, index) => (
-                        <div key={index} className="group bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-xl p-3 border border-gray-100 hover:shadow-md transition-all duration-200">
+                      {cartItems.map((item) => (
+                        <div key={item.id} className="group bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-xl p-3 border border-gray-100 hover:shadow-md transition-all duration-200">
                           <div className="flex justify-between items-start">
                             <div className="flex-1 pr-3">
                               <div className="flex items-center mb-2">
@@ -629,20 +577,28 @@ const LaptopRepairPage = () => {
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                   </svg>
                                 </div>
-                                <h4 className="font-semibold text-gray-900 text-sm leading-tight">{item.name}</h4>
+                                <h4 className="font-semibold text-gray-900 text-sm leading-tight">{item.serviceTitle}</h4>
                               </div>
                               <div className="flex items-center justify-between">
                                 <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                                  ₹{item.price}
+                                  ₹{item.totalPrice}
                                 </span>
-                                <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                                  ✓ Added
-                                </span>
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-xs text-gray-500">
+                                    Qty: {item.quantity}
+                                  </span>
+                                  <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                    ✓ Added
+                                  </span>
+                                </div>
                               </div>
                             </div>
                             <button 
-                              onClick={() => removeFromCart(index)}
-                              className="flex-shrink-0 w-6 h-6 bg-red-100 hover:bg-red-200 text-red-500 hover:text-red-600 rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-110"
+                              onClick={() => handleRemoveFromCart(item.id)}
+                              disabled={isCartLoading}
+                              className={`flex-shrink-0 w-6 h-6 bg-red-100 hover:bg-red-200 text-red-500 hover:text-red-600 rounded-full flex items-center justify-center transition-all duration-200 transform hover:scale-110 ${
+                                isCartLoading ? 'opacity-50 cursor-not-allowed' : ''
+                              }`}
                             >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -660,16 +616,16 @@ const LaptopRepairPage = () => {
                         <div className="flex justify-between items-center mb-4">
                           <span className="text-lg font-bold text-gray-800">Total Amount:</span>
                           <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                            ₹{getTotalPrice()}
+                            ₹{getCartTotal()}
                           </span>
                         </div>
                         
                         {/* Redesigned Book Now Button - Smaller Size */}
                         <button 
                           onClick={handleBookNow}
-                          disabled={isBookingInProgress || cart.length === 0}
+                          disabled={isBookingInProgress || getCartItemCount() === 0}
                           className={`w-full relative overflow-hidden text-white py-3 px-4 rounded-lg font-semibold text-base shadow-lg transition-all duration-300 transform group ${
-                            isBookingInProgress || cart.length === 0
+                            isBookingInProgress || getCartItemCount() === 0
                               ? 'bg-gray-400 cursor-not-allowed'
                               : 'bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500 hover:shadow-xl hover:scale-[1.02]'
                           }`}
@@ -691,7 +647,7 @@ const LaptopRepairPage = () => {
                                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
-                                Book Now - ₹{getTotalPrice()}
+                                Book Now - ₹{getCartTotal()}
                               </>
                             )}
                           </div>
@@ -800,14 +756,14 @@ const LaptopRepairPage = () => {
                     </div>
                     
                     {/* Cart Count Badge */}
-                    {cart.length > 0 && (
+                    {getCartItemCount() > 0 && (
                       <div className="bg-gradient-to-r from-green-400 to-emerald-400 backdrop-blur-sm rounded-full px-3 py-1 border border-white/30 shadow-lg">
                         <div className="flex items-center">
                           <svg className="w-4 h-4 mr-1 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.1 5H19M7 13v8a2 2 0 002 2h7a2 2 0 002-2v-8m-9 0V9a2 2 0 012-2h7a2 2 0 012 2v4m-9 0h9" />
                           </svg>
                           <span className="text-white text-sm font-bold">
-                            {cart.length} in cart
+                            {getCartItemCount()} in cart
                           </span>
                         </div>
                       </div>
@@ -900,7 +856,7 @@ const LaptopRepairPage = () => {
                       )}
                       
                       {/* Enhanced Cart Control Buttons with Visual Feedback */}
-                      {isServiceInCart(service.name) ? (
+                      {isServiceInCartByName(service.name) ? (
                         <div className="space-y-3">
                           {/* Buttons on same row with reduced width */}
                           <div className="flex gap-3">
@@ -986,7 +942,7 @@ const LaptopRepairPage = () => {
                       ) : (
                         <button 
                           onClick={() => {
-                            addToCart(service);
+                            handleAddToCart(service);
                             // Show success animation
                             const button = document.activeElement as HTMLButtonElement;
                             if (button) {
@@ -996,7 +952,10 @@ const LaptopRepairPage = () => {
                               }, 150);
                             }
                           }}
-                          className="w-full relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 group"
+                          disabled={isCartLoading}
+                          className={`w-full relative overflow-hidden bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 text-white py-4 px-6 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-[1.02] active:scale-95 group ${
+                            isCartLoading ? 'opacity-50 cursor-not-allowed' : ''
+                          }`}
                         >
                           <div className="absolute inset-0 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                           <div className="relative flex items-center justify-center">
@@ -1062,6 +1021,24 @@ const LaptopRepairPage = () => {
         onClose={() => setIsAddressSelectionOpen(false)}
         onSelectAddress={handleAddressSelected}
       />
+      
+      {/* Order Details Modal */}
+      {selectedAddress && user && (
+        <OrderDetailsModal
+          isOpen={isOrderDetailsOpen}
+          onClose={() => {
+            setIsOrderDetailsOpen(false);
+            setSelectedAddress(null);
+          }}
+          onConfirm={handleOrderDetailsConfirm}
+          selectedAddress={selectedAddress}
+          cartItems={cartItems}
+          totalAmount={getCartTotal()}
+          itemCount={getCartItemCount()}
+          isPlacingOrder={isBookingInProgress}
+          user={user}
+        />
+      )}
       
       {/* Order Success Modal */}
       {showOrderSuccess && (

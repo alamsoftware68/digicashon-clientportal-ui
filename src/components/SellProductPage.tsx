@@ -2,16 +2,17 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 const SellProductPage = () => {
   const router = useRouter();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 py-16 lg:py-24">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pb-16 lg:pb-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
-        <div className="mb-8">
+        <div className="mb-2">
           <button
             onClick={() => router.back()}
             className="group flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
@@ -30,37 +31,46 @@ const SellProductPage = () => {
           </button>
         </div>
 
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="relative inline-block mb-6">
-            <h1 className="text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 drop-shadow-sm">
-              Sell Your Device
-            </h1>
-            <div className="absolute -bottom-2 left-0 w-full h-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-full blur-sm"></div>
-          </div>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-            Turn your old devices into instant cash! Get the best value for your used phones, laptops, and tablets with our hassle-free selling process.
-          </p>
-          
-          {/* Trust Indicators */}
-          <div className="flex flex-wrap justify-center gap-6 mt-8">
-            <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-md">
-              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span className="text-sm font-semibold text-gray-700">Best Price Guarantee</span>
+        {/* Hero Section - Sticky Title */}
+        <div className="sticky top-16 z-30 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 pb-4 mb-6">
+          <div className="text-center">
+            <div className="relative inline-block mb-4">
+              <h1 className="relative">
+                <span className="block text-5xl lg:text-6xl font-semibold tracking-wide" style={{fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif', letterSpacing: '-0.02em'}}>
+                  <span className="relative inline-block">
+                    <span className="relative z-10 text-gray-800">Sell Your </span>
+                    <span className="relative z-10 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent font-bold">Device</span>
+                  </span>
+                </span>
+                {/* Decorative underline */}
+                <div className="mt-4 flex justify-center items-center gap-2">
+                  <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-blue-600 rounded-full"></div>
+                  <div className="w-1.5 h-1.5 bg-indigo-600 rounded-full"></div>
+                  <div className="w-12 h-0.5 bg-gradient-to-l from-transparent via-purple-500 to-purple-600 rounded-full"></div>
+                </div>
+              </h1>
             </div>
-            <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-md">
-              <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span className="text-sm font-semibold text-gray-700">Instant Payment</span>
-            </div>
-            <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-md">
-              <svg className="w-5 h-5 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span className="text-sm font-semibold text-gray-700">Free Pickup</span>
+            
+            {/* Trust Indicators */}
+            <div className="flex flex-wrap justify-center gap-6 mt-4">
+              <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-md">
+                <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-700">Best Price Guarantee</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-md">
+                <svg className="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-700">Instant Payment</span>
+              </div>
+              <div className="flex items-center space-x-2 bg-white/80 backdrop-blur-sm px-4 py-2 rounded-full shadow-md">
+                <svg className="w-5 h-5 text-purple-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-semibold text-gray-700">Free Pickup</span>
+              </div>
             </div>
           </div>
         </div>
@@ -77,11 +87,15 @@ const SellProductPage = () => {
               <div className="relative p-8">
                 {/* Icon Container */}
                 <div className="relative mb-6">
-                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110">
-                    {/* Laptop Icon */}
-                    <svg className="w-14 h-14 text-blue-600 group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
+                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110 overflow-hidden">
+                    {/* Windows Logo Image */}
+                    <Image 
+                      src="/images/Windows.png" 
+                      alt="Windows Logo" 
+                      width={56} 
+                      height={56} 
+                      className="object-contain"
+                    />
                   </div>
                   
                   {/* Floating Badge */}
@@ -94,11 +108,6 @@ const SellProductPage = () => {
                 <h3 className="text-2xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-3 text-center">
                   Windows
                 </h3>
-                
-                {/* Description */}
-                <p className="text-gray-600 group-hover:text-white/90 transition-colors duration-500 text-center mb-4 leading-relaxed">
-                  Get instant quotes for your Dell, HP, Lenovo and other Windows laptops
-                </p>
                 
                 {/* Features */}
                 <ul className="space-y-2 mb-6">
@@ -162,11 +171,6 @@ const SellProductPage = () => {
                   Apple
                 </h3>
                 
-                {/* Description */}
-                <p className="text-gray-600 group-hover:text-white/90 transition-colors duration-500 text-center mb-4 leading-relaxed">
-                  Get top value for your MacBook, MacBook Air, MacBook Pro, and iMac
-                </p>
-                
                 {/* Features */}
                 <ul className="space-y-2 mb-6">
                   <li className="flex items-center text-sm text-gray-700 group-hover:text-white/90 transition-colors duration-500">
@@ -211,11 +215,15 @@ const SellProductPage = () => {
               <div className="relative p-8">
                 {/* Icon Container */}
                 <div className="relative mb-6">
-                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-emerald-100 to-teal-100 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110">
-                    {/* Mobile Icon */}
-                    <svg className="w-14 h-14 text-emerald-600 group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
+                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-emerald-100 to-teal-100 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110 overflow-hidden p-1">
+                    {/* Mobile Logo Image */}
+                    <Image 
+                      src="/images/Sell Mobile.png" 
+                      alt="Mobile Logo" 
+                      width={110} 
+                      height={110} 
+                      className="object-contain w-full h-full"
+                    />
                   </div>
                   
                   {/* Floating Badge */}
@@ -228,11 +236,6 @@ const SellProductPage = () => {
                 <h3 className="text-2xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-3 text-center">
                   Sell MOBILE
                 </h3>
-                
-                {/* Description */}
-                <p className="text-gray-600 group-hover:text-white/90 transition-colors duration-500 text-center mb-4 leading-relaxed">
-                  Sell your iPhone, Samsung, OnePlus, and other smartphones at great prices
-                </p>
                 
                 {/* Features */}
                 <ul className="space-y-2 mb-6">
@@ -278,11 +281,15 @@ const SellProductPage = () => {
               <div className="relative p-8">
                 {/* Icon Container */}
                 <div className="relative mb-6">
-                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-pink-100 to-rose-100 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110">
-                    {/* Tablet Icon */}
-                    <svg className="w-14 h-14 text-pink-600 group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                    </svg>
+                  <div className="w-24 h-24 mx-auto bg-gradient-to-br from-pink-100 to-rose-100 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110 overflow-hidden p-1">
+                    {/* Tablet Logo Image */}
+                    <Image 
+                      src="/images/Tablet iPAD.png" 
+                      alt="Tablet iPad Logo" 
+                      width={110} 
+                      height={110} 
+                      className="object-contain w-full h-full"
+                    />
                   </div>
                   
                   {/* Floating Badge */}
@@ -295,11 +302,6 @@ const SellProductPage = () => {
                 <h3 className="text-2xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-3 text-center">
                   Sell TABLET/iPAD
                 </h3>
-                
-                {/* Description */}
-                <p className="text-gray-600 group-hover:text-white/90 transition-colors duration-500 text-center mb-4 leading-relaxed">
-                  Get excellent prices for your iPad, Samsung Galaxy Tab, and other tablets
-                </p>
                 
                 {/* Features */}
                 <ul className="space-y-2 mb-6">

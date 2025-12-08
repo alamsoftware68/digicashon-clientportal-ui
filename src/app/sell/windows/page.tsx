@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -61,11 +62,15 @@ export default function SellWindows() {
                 <div className="relative p-6 flex flex-col h-full">
                   {/* Icon Container */}
                   <div className="relative mb-4">
-                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110">
-                      {/* Laptop Icon */}
-                      <svg className="w-12 h-12 text-blue-600 group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
+                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110 overflow-hidden p-1">
+                      {/* Laptop Image */}
+                      <Image 
+                        src="/images/laptop.png" 
+                        alt="Laptop Icon" 
+                        width={80} 
+                        height={80} 
+                        className="object-contain w-full h-full"
+                      />
                     </div>
                   </div>
                   
@@ -123,12 +128,15 @@ export default function SellWindows() {
                 <div className="relative p-6 flex flex-col h-full">
                   {/* Icon Container */}
                   <div className="relative mb-4">
-                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110">
-                      {/* Desktop Icon */}
-                      <svg className="w-12 h-12 text-indigo-600 group-hover:text-white transition-colors duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M4 16h16" />
-                      </svg>
+                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-indigo-100 to-purple-100 rounded-xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110 overflow-hidden p-1">
+                      {/* Desktop Image */}
+                      <Image 
+                        src="/images/desktop.png" 
+                        alt="Desktop Icon" 
+                        width={80} 
+                        height={80} 
+                        className="object-contain w-full h-full"
+                      />
                     </div>
                   </div>
                   

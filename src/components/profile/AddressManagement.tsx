@@ -182,7 +182,7 @@ const AddressManagement = () => {
         
         if (response.success && response.data) {
           // Update local state
-          const addressData = response.data;
+          const addressData = response.data as any;
           const updatedAddresses = addresses.map(addr => 
             addr.id === editingAddress.id 
               ? {
@@ -197,7 +197,7 @@ const AddressManagement = () => {
               : addr
           );
           setAddresses(updatedAddresses);
-          console.log('[Addresses] Address updated successfully:', response.data.id);
+          console.log('[Addresses] Address updated successfully:', addressData.id);
         } else {
           throw new Error(response.message || 'Failed to update address');
         }
@@ -214,7 +214,7 @@ const AddressManagement = () => {
         
         if (response.success && response.data) {
           // Add to local state
-          const addressData = response.data;
+          const addressData = response.data as any;
           const newAddress: Address = {
             id: addressData.id.toString(),
             type: addressData.type,
@@ -225,7 +225,7 @@ const AddressManagement = () => {
             isDefault: addressData.isDefault
           };
           setAddresses([...addresses, newAddress]);
-          console.log('[Addresses] Address added successfully:', response.data.id);
+          console.log('[Addresses] Address added successfully:', addressData.id);
         } else {
           throw new Error(response.message || 'Failed to add address');
         }

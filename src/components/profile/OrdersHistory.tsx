@@ -29,7 +29,7 @@ const OrdersHistory = () => {
       const result = await apiService.getMyOrders();
       
       if (result.success && result.data) {
-        setOrders(result.data);
+        setOrders(result.data as Order[]);
         console.log('Orders fetched successfully:', result.data);
       } else {
         setError(result.message || 'Failed to fetch orders');

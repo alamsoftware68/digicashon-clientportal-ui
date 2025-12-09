@@ -109,7 +109,7 @@ const OrderDetailsViewModal: React.FC<OrderDetailsViewModalProps> = ({
       setIsLoading(true);
       setError(null);
       console.log(
-        "[OrderDetailsView] Fetching details for order:",
+        "[OrderDetailsView] Fetching order details for:",
         orderNumber
       );
 

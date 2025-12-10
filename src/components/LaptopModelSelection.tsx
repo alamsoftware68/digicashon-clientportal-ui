@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 interface LaptopModelSelectionProps {
@@ -13,17 +14,17 @@ const LaptopModelSelection: React.FC<LaptopModelSelectionProps> = ({ brand }) =>
 
   // Dell laptop models
   const dellModels = [
-    { name: 'DELL INSPIRON', image: '💻', color: 'from-blue-500 to-blue-600' },
-    { name: 'DELL VOSTRO', image: '💼', color: 'from-gray-600 to-gray-700' },
-    { name: 'DELL STUDIO', image: '🎨', color: 'from-amber-600 to-orange-600' },
-    { name: 'DELL LATITUDE', image: '🏢', color: 'from-slate-700 to-slate-800' },
-    { name: 'DELL XPS', image: '✨', color: 'from-indigo-600 to-purple-600' },
-    { name: 'DELL ALIENWARE', image: '👾', color: 'from-emerald-600 to-teal-700' },
-    { name: 'DELL CHROMEBOOK', image: '🌐', color: 'from-cyan-600 to-blue-600' },
-    { name: 'DELL G3 GAMING LAPTOP', image: '🎮', color: 'from-blue-700 to-indigo-700' },
-    { name: 'DELL G5 GAMING LAPTOP', image: '🎯', color: 'from-blue-800 to-indigo-800' },
-    { name: 'DELL G7 GAMING LAPTOP', image: '🚀', color: 'from-blue-900 to-indigo-900' },
-    { name: 'DELL PRECISION', image: '⚙️', color: 'from-gray-700 to-gray-800' },
+    { name: 'DELL INSPIRON', image: '/images/laptop/dell/Dell_Inspirion_Series.png', color: 'from-blue-500 to-blue-600' },
+    { name: 'DELL VOSTRO', image: '/images/laptop/dell/Dell_Vostro_Series.png', color: 'from-gray-600 to-gray-700' },
+    { name: 'DELL STUDIO', image: '/images/laptop/dell/Dell_Other_Series.png', color: 'from-amber-600 to-orange-600' },
+    { name: 'DELL LATITUDE', image: '/images/laptop/dell/Dell_Latitude_Series.png', color: 'from-slate-700 to-slate-800' },
+    { name: 'DELL XPS', image: '/images/laptop/dell/Dell_XPS_Series.png', color: 'from-indigo-600 to-purple-600' },
+    { name: 'DELL ALIENWARE', image: '/images/laptop/dell/Dell_AlienWare_Series.png', color: 'from-emerald-600 to-teal-700' },
+    { name: 'DELL CHROMEBOOK', image: '/images/laptop/dell/Dell_Other_Series.png', color: 'from-cyan-600 to-blue-600' },
+    { name: 'DELL G3 GAMING LAPTOP', image: '/images/laptop/dell/Dell_G_Series.png', color: 'from-blue-700 to-indigo-700' },
+    { name: 'DELL G5 GAMING LAPTOP', image: '/images/laptop/dell/Dell_G_Series.png', color: 'from-blue-800 to-indigo-800' },
+    { name: 'DELL G7 GAMING LAPTOP', image: '/images/laptop/dell/Dell_G_Series.png', color: 'from-blue-900 to-indigo-900' },
+    { name: 'DELL PRECISION', image: '/images/laptop/dell/Dell_Precision_Series.png', color: 'from-gray-700 to-gray-800' },
   ];
 
   // You can add other brand models here in the future
@@ -92,21 +93,14 @@ const LaptopModelSelection: React.FC<LaptopModelSelectionProps> = ({ brand }) =>
                 {/* Content */}
                 <div className="relative p-6">
                   {/* Image/Icon Container */}
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-8 mb-4 flex items-center justify-center min-h-[180px] group-hover:bg-white/20 transition-all duration-300">
-                    {/* Laptop Icon */}
-                    <div className="text-center">
-                      <div className="text-6xl mb-2 transform group-hover:scale-110 transition-transform duration-300">
-                        {model.image}
-                      </div>
-                      <svg 
-                        className="w-20 h-20 text-gray-400 group-hover:text-white transition-colors duration-300 mx-auto" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-4 mb-4 flex items-center justify-center min-h-[180px] group-hover:bg-white/20 transition-all duration-300">
+                    <Image
+                      src={model.image}
+                      alt={model.name}
+                      width={180}
+                      height={140}
+                      className="object-contain max-h-40 w-auto group-hover:scale-105 transition-transform duration-300"
+                    />
                   </div>
                   
                   {/* Model Name */}

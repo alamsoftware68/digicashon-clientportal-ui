@@ -16,26 +16,31 @@ export default function SellMSILaptop() {
       name: 'MSI Modern Series', 
       description: 'Modern productivity laptops',
       color: 'from-blue-600 to-indigo-700',
+      image: '/images/laptop/msi/MSI_Modern_Series.png',
     },
     { 
       name: 'MSI Thin Gaming Series', 
       description: 'Slim gaming laptops',
       color: 'from-purple-600 to-pink-700',
+      image: '/images/laptop/msi/MSI_Thin_Gaming_Series.png',
     },
     { 
       name: 'MSI Vector Gaming Series', 
       description: 'Powerful gaming laptops',
       color: 'from-red-600 to-orange-700',
+      image: '/images/laptop/msi/MSI _Vector_Gaming_Series.png',
     },
     { 
       name: 'MSI Katana Gaming Series', 
       description: 'Budget gaming laptops',
       color: 'from-orange-600 to-red-700',
+      image: '/images/laptop/msi/MSI_Katana_Gaming_Series.png',
     },
     { 
       name: 'MSI Other Series', 
       description: 'Other MSI models',
       color: 'from-gray-700 to-black',
+      image: '/images/laptop/msi/MSI_others_Series_converted.png',
     },
   ];
 
@@ -99,10 +104,14 @@ export default function SellMSILaptop() {
                   <div className="relative p-6 flex flex-col h-full min-h-[200px]">
                     {/* Icon */}
                     <div className="mb-4">
-                      <div className={`w-16 h-16 mx-auto bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-lg group-hover:bg-white/20 group-hover:shadow-2xl transition-all duration-300`}>
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
+                      <div className="w-20 h-20 mx-auto bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          width={64}
+                          height={64}
+                          className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
                     </div>
                     

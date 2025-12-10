@@ -16,41 +16,49 @@ export default function SellAcerLaptop() {
       name: 'Acer Predator Series', 
       description: 'Extreme gaming laptops',
       color: 'from-red-600 to-black',
+      image: '/images/laptop/acer/Acer_Predator_Series.png',
     },
     { 
       name: 'Acer Nitro Series', 
       description: 'Budget gaming laptops',
       color: 'from-orange-600 to-red-700',
+      image: '/images/laptop/acer/Acer_Nitro_Series.png',
     },
     { 
       name: 'Acer Aspire Series', 
       description: 'Everyday computing laptops',
       color: 'from-blue-500 to-blue-700',
+      image: '/images/laptop/acer/Acer_Aspire_Series.png',
     },
     { 
       name: 'Acer Swift Series', 
       description: 'Ultraportable laptops',
       color: 'from-indigo-500 to-indigo-700',
+      image: '/images/laptop/acer/Acer_Swift_Series.png',
     },
     { 
       name: 'Acer Spin Series', 
       description: 'Convertible 2-in-1 laptops',
       color: 'from-purple-500 to-purple-700',
+      image: '/images/laptop/acer/Acer_Travelmate_Series.png',
     },
     { 
       name: 'Acer TravelMate Series', 
       description: 'Business laptops',
       color: 'from-gray-600 to-gray-800',
+      image: '/images/laptop/acer/Acer_Travelmate_Series.png',
     },
     { 
       name: 'Acer Chromebook Series', 
       description: 'Chrome OS laptops',
       color: 'from-green-500 to-green-700',
+      image: '/images/laptop/acer/Acer_Aspire_Series.png',
     },
     { 
       name: 'Acer Other Series', 
       description: 'Other Acer models',
       color: 'from-cyan-500 to-blue-600',
+      image: '/images/laptop/acer/Acer_Other_Series.png',
     },
   ];
 
@@ -114,10 +122,14 @@ export default function SellAcerLaptop() {
                   <div className="relative p-6 flex flex-col h-full min-h-[180px]">
                     {/* Icon */}
                     <div className="mb-4">
-                      <div className={`w-16 h-16 mx-auto bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-lg group-hover:bg-white/20 group-hover:shadow-2xl transition-all duration-300`}>
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
+                      <div className="w-20 h-20 mx-auto bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          width={64}
+                          height={64}
+                          className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
                     </div>
                     

@@ -16,41 +16,49 @@ export default function SellDellLaptop() {
       name: 'Dell Inspiron Series', 
       description: 'Everyday computing laptops',
       color: 'from-cyan-500 to-cyan-700',
+      image: '/images/laptop/dell/Dell_Inspirion_Series.png',
     },
     { 
       name: 'Dell Vostro Series', 
       description: 'Small business laptops',
       color: 'from-blue-500 to-blue-700',
+      image: '/images/laptop/dell/Dell_Vostro_Series.png',
     },
     { 
       name: 'Dell Latitude Series', 
       description: 'Business & enterprise laptops',
       color: 'from-indigo-500 to-indigo-700',
+      image: '/images/laptop/dell/Dell_Latitude_Series.png',
     },
     { 
       name: 'Dell XPS Series', 
       description: 'Premium performance laptops',
       color: 'from-purple-500 to-purple-700',
+      image: '/images/laptop/dell/Dell_XPS_Series.png',
     },
     { 
       name: 'Dell Precision Series', 
       description: 'Mobile workstations',
       color: 'from-violet-500 to-violet-700',
+      image: '/images/laptop/dell/Dell_Precision_Series.png',
     },
     { 
       name: 'Dell Alienware Series', 
       description: 'Gaming laptops',
       color: 'from-pink-500 to-rose-700',
+      image: '/images/laptop/dell/Dell_AlienWare_Series.png',
     },
     { 
       name: 'Dell G Series', 
       description: 'Budget gaming laptops',
       color: 'from-emerald-500 to-green-700',
+      image: '/images/laptop/dell/Dell_G_Series.png',
     },
     { 
       name: 'Other Series', 
       description: 'Other Dell models',
       color: 'from-orange-500 to-red-600',
+      image: '/images/laptop/dell/Dell_Other_Series.png',
     },
   ];
 
@@ -114,10 +122,14 @@ export default function SellDellLaptop() {
                   <div className="relative p-6 flex flex-col h-full min-h-[180px]">
                     {/* Icon */}
                     <div className="mb-4">
-                      <div className={`w-16 h-16 mx-auto bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-lg group-hover:bg-white/20 group-hover:shadow-2xl transition-all duration-300`}>
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
+                      <div className={`w-20 h-20 mx-auto bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 overflow-hidden`}>
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          width={64}
+                          height={64}
+                          className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
                     </div>
                     

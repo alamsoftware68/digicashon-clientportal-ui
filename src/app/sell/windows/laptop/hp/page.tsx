@@ -16,51 +16,61 @@ export default function SellHPLaptop() {
       name: 'HP Pavilion Series', 
       description: 'Stylish everyday laptops',
       color: 'from-blue-500 to-blue-700',
+      image: '/images/laptop/hp/HP_Pavilion_Series.png',
     },
     { 
       name: 'HP Envy Series', 
       description: 'Premium consumer laptops',
       color: 'from-indigo-500 to-indigo-700',
+      image: '/images/laptop/hp/HP_Envy_Series.png',
     },
     { 
       name: 'HP Spectre Series', 
       description: 'Ultra-premium convertibles',
       color: 'from-purple-500 to-purple-700',
+      image: '/images/laptop/hp/HP_Spectre_Series.png',
     },
     { 
       name: 'HP EliteBook Series', 
       description: 'Business & enterprise laptops',
       color: 'from-violet-500 to-violet-700',
+      image: '/images/laptop/hp/HP_EliteBook_Series.png',
     },
     { 
       name: 'HP ProBook Series', 
       description: 'Professional business laptops',
       color: 'from-fuchsia-500 to-fuchsia-700',
+      image: '/images/laptop/hp/HP_Probook_Series.png',
     },
     { 
       name: 'HP ZBook Series', 
       description: 'Mobile workstations',
       color: 'from-pink-500 to-rose-700',
+      image: '/images/laptop/hp/HP_ZBook_Series.png',
     },
     { 
       name: 'HP Omen Series', 
       description: 'Gaming laptops',
       color: 'from-red-500 to-red-700',
+      image: '/images/laptop/hp/HP_Omen_Series.png',
     },
     { 
       name: 'HP Victus Series', 
       description: 'Budget gaming laptops',
       color: 'from-emerald-500 to-green-700',
+      image: '/images/laptop/hp/HP_Victus_Series.png',
     },
     { 
       name: 'HP Essential / HP Laptop Series', 
       description: 'Basic computing laptops',
       color: 'from-cyan-500 to-blue-600',
+      image: '/images/laptop/hp/HP_Essential_Series.png',
     },
     { 
       name: 'HP Other Series', 
       description: 'Other HP models',
       color: 'from-orange-500 to-red-600',
+      image: '/images/laptop/hp/HP_Others_Series.png',
     },
   ];
 
@@ -124,10 +134,14 @@ export default function SellHPLaptop() {
                   <div className="relative p-5 flex flex-col h-full min-h-[180px]">
                     {/* Icon */}
                     <div className="mb-3">
-                      <div className={`w-14 h-14 mx-auto bg-gradient-to-br ${item.color} rounded-xl flex items-center justify-center shadow-lg group-hover:bg-white/20 group-hover:shadow-2xl transition-all duration-300`}>
-                        <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
+                      <div className="w-20 h-20 mx-auto bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                        <Image
+                          src={item.image}
+                          alt={item.name}
+                          width={64}
+                          height={64}
+                          className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-300"
+                        />
                       </div>
                     </div>
                     

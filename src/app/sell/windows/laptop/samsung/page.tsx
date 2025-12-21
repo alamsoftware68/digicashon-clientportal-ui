@@ -12,35 +12,114 @@ export default function SellSamsungLaptop() {
   const router = useRouter();
 
   const models = [
-    { 
-      name: 'Galaxy Book', 
-      description: 'Original Galaxy Book series',
+    // Galaxy Book2 / Go generation
+    {
+      name: 'Galaxy Book Go Series',
+      description: 'Lightweight, value-focused Galaxy Book Go laptops',
+      color: 'from-sky-500 to-sky-700',
+    },
+    {
+      name: 'Galaxy Book2 Series',
+      description: '2nd generation Galaxy Book laptops',
       color: 'from-blue-500 to-blue-700',
     },
-    { 
-      name: 'Galaxy Book2 360', 
-      description: 'Convertible 2-in-1 laptop',
+    {
+      name: 'Galaxy Book2 360 Series',
+      description: 'Convertible 2-in-1 Galaxy Book2 360 models',
       color: 'from-indigo-500 to-indigo-700',
     },
-    { 
-      name: 'Galaxy Book2 Pro 360', 
-      description: 'Premium convertible model',
+    {
+      name: 'Galaxy Book2 Pro Series',
+      description: 'Thin and light Galaxy Book2 Pro ultrabooks',
       color: 'from-purple-500 to-purple-700',
     },
-    { 
-      name: 'Galaxy Book3', 
-      description: 'Latest Book3 series',
-      color: 'from-violet-500 to-violet-700',
-    },
-    { 
-      name: 'Galaxy Book4', 
-      description: 'Latest Book4 series',
+    {
+      name: 'Galaxy Book2 Pro 360 Series',
+      description: 'Premium 2-in-1 Galaxy Book2 Pro 360 laptops',
       color: 'from-fuchsia-500 to-fuchsia-700',
     },
-    { 
-      name: 'Galaxy Book5', 
-      description: 'Newest Galaxy Book',
-      color: 'from-pink-500 to-pink-700',
+
+    // Galaxy Book3 generation
+    {
+      name: 'Galaxy Book3 Series',
+      description: 'Standard Galaxy Book3 laptops',
+      color: 'from-cyan-500 to-cyan-700',
+    },
+    {
+      name: 'Galaxy Book3 360 Series',
+      description: 'Convertible Galaxy Book3 360 models',
+      color: 'from-teal-500 to-teal-700',
+    },
+    {
+      name: 'Galaxy Book3 Ultra Series',
+      description: 'High‑performance Galaxy Book3 Ultra laptops',
+      color: 'from-emerald-500 to-emerald-700',
+    },
+    {
+      name: 'Galaxy Book3 Pro 360 Series',
+      description: 'Premium 2‑in‑1 Galaxy Book3 Pro 360 laptops',
+      color: 'from-sky-600 to-blue-700',
+    },
+
+    // Galaxy Book4 generation
+    {
+      name: 'Galaxy Book4 Series',
+      description: 'Standard Galaxy Book4 laptops',
+      color: 'from-blue-600 to-indigo-700',
+    },
+    {
+      name: 'Galaxy Book4 360 Series',
+      description: 'Convertible Galaxy Book4 360 models',
+      color: 'from-indigo-600 to-purple-700',
+    },
+    {
+      name: 'Galaxy Book4 Pro Series',
+      description: 'Thin and light Galaxy Book4 Pro ultrabooks',
+      color: 'from-purple-600 to-violet-700',
+    },
+    {
+      name: 'Galaxy Book4 Pro 360 Series',
+      description: 'Premium 2‑in‑1 Galaxy Book4 Pro 360 laptops',
+      color: 'from-violet-600 to-fuchsia-700',
+    },
+    {
+      name: 'Galaxy Book4 Ultra Series',
+      description: 'High‑end Galaxy Book4 Ultra laptops',
+      color: 'from-fuchsia-600 to-pink-700',
+    },
+    {
+      name: 'Galaxy Book4 Edge Series',
+      description: 'AI‑focused Galaxy Book4 Edge models',
+      color: 'from-rose-500 to-amber-600',
+    },
+
+    // Galaxy Book5 generation
+    {
+      name: 'Galaxy Book5 Series',
+      description: 'Standard Galaxy Book5 laptops',
+      color: 'from-blue-500 to-blue-700',
+    },
+    {
+      name: 'Galaxy Book5 360 Series',
+      description: 'Convertible Galaxy Book5 360 models',
+      color: 'from-indigo-500 to-indigo-700',
+    },
+    {
+      name: 'Galaxy Book5 Pro Series',
+      description: 'Thin and light Galaxy Book5 Pro ultrabooks',
+      color: 'from-purple-500 to-purple-700',
+    },
+    {
+      name: 'Galaxy Book5 Pro 360 Series',
+      description: 'Premium 2‑in‑1 Galaxy Book5 Pro 360 laptops',
+      color: 'from-emerald-500 to-teal-700',
+    },
+
+    // Fallback / others
+    {
+      name: 'Others Samsung Series',
+      description: 'Other Samsung Galaxy Book and legacy models',
+      color: 'from-slate-500 to-slate-700',
     },
   ];
 
@@ -89,40 +168,40 @@ export default function SellSamsungLaptop() {
           </div>
 
           {/* Model Selection Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6 max-w-6xl mx-auto">
             {models.map((model) => (
               <Link 
                 key={model.name} 
                 href={`/sell/windows/laptop/samsung/${model.name.toLowerCase().replace(/\s+/g, '-')}`}
                 className="group"
               >
-                <div className="relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-105 hover:-translate-y-1 h-full">
+                <div className="relative bg-white/90 border border-slate-100 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1 hover:scale-[1.02] h-full">
                   {/* Background Gradient */}
                   <div className={`absolute inset-0 bg-gradient-to-br ${model.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
                   
                   {/* Content */}
-                  <div className="relative p-6 flex flex-col h-full min-h-[160px]">
+                  <div className="relative p-4 md:p-5 flex flex-col h-full min-h-[140px]">
                     {/* Icon */}
-                    <div className="mb-4">
-                      <div className={`w-16 h-16 mx-auto bg-gradient-to-br ${model.color} rounded-xl flex items-center justify-center shadow-lg group-hover:bg-white/20 group-hover:shadow-2xl transition-all duration-300`}>
-                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="mb-3 flex justify-center">
+                      <div className={`w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br ${model.color} rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white/70 group-hover:ring-offset-2 group-hover:ring-offset-white group-hover:bg-white/15 transition-all duration-300`}>
+                        <svg className="w-7 h-7 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                       </div>
                     </div>
                     
                     {/* Model Name */}
-                    <h3 className="text-xl font-bold text-gray-800 group-hover:text-white transition-colors duration-300 text-center mb-2">
+                    <h3 className="text-base md:text-lg font-semibold text-slate-900 group-hover:text-white transition-colors duration-300 text-center mb-1 leading-snug">
                       {model.name}
                     </h3>
                     
                     {/* Description */}
-                    <p className="text-sm text-gray-600 group-hover:text-white/90 transition-colors duration-300 text-center mb-4 flex-grow">
+                    <p className="text-xs md:text-sm text-slate-600 group-hover:text-white/90 transition-colors duration-300 text-center mb-3 flex-grow">
                       {model.description}
                     </p>
                     
                     {/* CTA Button */}
-                    <button className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 group-hover:from-white group-hover:to-white text-white group-hover:text-cyan-600 font-semibold py-2.5 rounded-xl shadow-lg group-hover:shadow-2xl transition-all duration-300 transform group-hover:scale-105">
+                    <button className="mt-auto w-full bg-gradient-to-r from-cyan-600 to-blue-600 group-hover:from-white group-hover:to-white text-xs md:text-sm text-white group-hover:text-cyan-600 font-semibold py-2 rounded-xl shadow-md group-hover:shadow-2xl transition-all duration-300 transform group-hover:scale-105">
                       Select Model →
                     </button>
                   </div>

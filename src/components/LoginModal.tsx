@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import apiService from '@/services/api';
 
@@ -19,6 +20,7 @@ interface SignupData {
 }
 
 const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'signin' | 'signup' | 'forgot'>('signin');
   const [signupStep, setSignupStep] = useState<'mobile' | 'otp' | 'details'>('mobile');
   const [loginMode, setLoginMode] = useState<'password' | 'otp'>('password');
@@ -48,7 +50,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   const [maskedMobile, setMaskedMobile] = useState<string>('');
   const [signupMessage, setSignupMessage] = useState<string>('');
 
-  const { login, signup, sendLoginOTP, verifyLoginOTP } = useAuth();
+  const { login, signup, sendLoginOTP, verifyLoginOTP, completeSignup } = useAuth();
 
   // Close modal on escape key and reset state when opened
   useEffect(() => {
@@ -213,7 +215,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
     setLoginError('');
     
     try {
-      // Call the Spring Boot API to complete signup
+      // Use AuthContext's completeSignup method which properly updates state
       const signupData = {
         mobile: verifiedMobile,
         name: formData.name,
@@ -222,34 +224,11 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         city: formData.city
       };
       
-      const result = await apiService.completeSignup(signupData);
+      const result = await completeSignup(signupData);
       
       if (result.success && result.data) {
-        // Handle successful registration with tokens
-        const { user, tokens } = result.data;
-        
-        // Create user data in the format expected by AuthContext
-        const userData = {
-          id: user.id.toString(),
-          username: user.mobile,
-          name: user.name,
-          email: user.email,
-          phone: user.mobile,
-          addresses: [],
-          orders: [],
-          paymentMethods: [],
-          invoices: []
-        };
-        
-        // Store user data for immediate login
-        localStorage.setItem('repairapp_user', JSON.stringify(userData));
-        localStorage.setItem('repairapp_authenticated', 'true');
-        localStorage.setItem('repairapp_login_time', Date.now().toString());
-        
-        // Dispatch auth change event
-        window.dispatchEvent(new CustomEvent('authChanged', { 
-          detail: { type: 'login', user: userData } 
-        }));
+        // AuthContext has already updated the user state and localStorage
+        const { user } = result.data;
         
         setModalMessage(`Welcome, ${user.name}! Your account has been created successfully and you have been automatically signed in.`);
         setShowSuccessModal(true);
@@ -291,6 +270,27 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         if (success) {
           onClose();
           resetForm();
+          
+          // Check if user came from sell flow and redirect accordingly
+          const sellFlowData = sessionStorage.getItem('sellFlowData');
+          if (sellFlowData) {
+            try {
+              const data = JSON.parse(sellFlowData);
+              if (data.flow === 'sell-laptop' && data.redirectUrl) {
+                // IMMEDIATELY clear ALL related storage items
+                sessionStorage.removeItem('sellFlowData');
+                sessionStorage.removeItem('sellFlowProcessed');
+                // Navigate to price summary with stored params
+                const params = new URLSearchParams(data.params);
+                router.push(`${data.redirectUrl}?${params.toString()}`);
+                return; // Exit early to prevent further execution
+              }
+            } catch (error) {
+              console.error('Error parsing sell flow data:', error);
+              sessionStorage.removeItem('sellFlowData');
+              sessionStorage.removeItem('sellFlowProcessed');
+            }
+          }
         } else {
           setLoginError('Invalid mobile number or password. Try demo credentials from above.');
         }
@@ -336,9 +336,41 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
   };
 
   const handleSuccessModalClose = () => {
+    // Check if user came from sell flow
+    const sellFlowData = sessionStorage.getItem('sellFlowData');
+    let shouldRedirect = false;
+    let redirectData: any = null;
+    
+    if (sellFlowData) {
+      try {
+        redirectData = JSON.parse(sellFlowData);
+        if (redirectData.flow === 'sell-laptop' && redirectData.params) {
+          shouldRedirect = true;
+          // DO NOT clear sellFlowData yet - we need it for the physical-condition page
+          // Only remove the processed flag
+          sessionStorage.removeItem('sellFlowProcessed');
+        }
+      } catch (error) {
+        console.error('Error parsing sell flow data:', error);
+        sessionStorage.removeItem('sellFlowData');
+        sessionStorage.removeItem('sellFlowProcessed');
+      }
+    }
+    
+    // Close modals and reset form
     setShowSuccessModal(false);
     setActiveTab('signin');
     resetForm();
+    onClose(); // Close the login modal
+    
+    // Redirect back to physical-condition page with data preserved
+    if (shouldRedirect && redirectData) {
+      const params = new URLSearchParams(redirectData.params);
+      // Navigate back to physical-condition page (NOT price-summary)
+      setTimeout(() => {
+        router.push(`/sell/windows/laptop/samsung/galaxy-book-go-series/physical-condition?${params.toString()}`);
+      }, 100);
+    }
   };
 
   const handleErrorModalClose = () => {
@@ -501,6 +533,27 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         onClose();
         resetForm();
         console.log('Login OTP verification successful:', result.message);
+        
+        // Check if user came from sell flow and redirect accordingly
+        const sellFlowData = sessionStorage.getItem('sellFlowData');
+        if (sellFlowData) {
+          try {
+            const data = JSON.parse(sellFlowData);
+            if (data.flow === 'sell-laptop' && data.redirectUrl) {
+              // IMMEDIATELY clear ALL related storage items
+              sessionStorage.removeItem('sellFlowData');
+              sessionStorage.removeItem('sellFlowProcessed');
+              // Navigate to price summary with stored params
+              const params = new URLSearchParams(data.params);
+              router.push(`${data.redirectUrl}?${params.toString()}`);
+              return; // Exit early to prevent further execution
+            }
+          } catch (error) {
+            console.error('Error parsing sell flow data:', error);
+            sessionStorage.removeItem('sellFlowData');
+            sessionStorage.removeItem('sellFlowProcessed');
+          }
+        }
       } else {
         setOtpError(result.message || 'Invalid OTP. Please try again.');
       }
@@ -597,6 +650,27 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
         onClose();
         resetForm();
         console.log('Login OTP verification successful (auto):', result.message);
+        
+        // Check if user came from sell flow and redirect accordingly
+        const sellFlowData = sessionStorage.getItem('sellFlowData');
+        if (sellFlowData) {
+          try {
+            const data = JSON.parse(sellFlowData);
+            if (data.flow === 'sell-laptop' && data.redirectUrl) {
+              // IMMEDIATELY clear ALL related storage items
+              sessionStorage.removeItem('sellFlowData');
+              sessionStorage.removeItem('sellFlowProcessed');
+              // Navigate to price summary with stored params
+              const params = new URLSearchParams(data.params);
+              router.push(`${data.redirectUrl}?${params.toString()}`);
+              return; // Exit early to prevent further execution
+            }
+          } catch (error) {
+            console.error('Error parsing sell flow data:', error);
+            sessionStorage.removeItem('sellFlowData');
+            sessionStorage.removeItem('sellFlowProcessed');
+          }
+        }
       } else {
         setOtpError(result.message || 'Invalid OTP. Please try again.');
       }
@@ -764,7 +838,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                     name="mobile"
                     value={formData.mobile}
                     onChange={handleInputChange}
-                    className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors ${
+                    className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors text-gray-900 bg-white ${
                       errors.mobile 
                         ? 'border-red-300 focus:ring-red-200' 
                         : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
@@ -915,7 +989,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors ${
+                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors text-gray-900 bg-white ${
                         errors.name 
                           ? 'border-red-300 focus:ring-red-200' 
                           : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
@@ -942,7 +1016,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                       name="email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors ${
+                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors text-gray-900 bg-white ${
                         errors.email 
                           ? 'border-red-300 focus:ring-red-200' 
                           : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
@@ -969,7 +1043,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                       name="password"
                       value={formData.password}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors ${
+                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors text-gray-900 bg-white ${
                         errors.password 
                           ? 'border-red-300 focus:ring-red-200' 
                           : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
@@ -996,7 +1070,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors ${
+                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors text-gray-900 bg-white ${
                         errors.confirmPassword 
                           ? 'border-red-300 focus:ring-red-200' 
                           : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'
@@ -1023,7 +1097,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                       name="city"
                       value={formData.city}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors ${
+                      className={`w-full px-4 py-3 pl-11 border rounded-xl focus:outline-none focus:ring-2 transition-colors text-gray-900 bg-white ${
                         errors.city 
                           ? 'border-red-300 focus:ring-red-200' 
                           : 'border-gray-300 focus:ring-blue-200 focus:border-blue-400'

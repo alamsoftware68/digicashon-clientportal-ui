@@ -26,17 +26,80 @@ const OrdersHistory = () => {
     try {
       setIsLoading(true);
       setError(null);
-      const result = await apiService.getMyOrders();
       
-      if (result.success && result.data) {
-        setOrders(result.data as Order[]);
-        console.log('Orders fetched successfully:', result.data);
-      } else {
-        setError(result.message || 'Failed to fetch orders');
+      // First, load laptop sell orders from localStorage
+      const sellOrders = JSON.parse(localStorage.getItem('laptop_sell_orders') || '[]');
+      const transformedSellOrders = sellOrders.map((sellOrder: any) => ({
+        id: sellOrder.id,
+        orderNumber: sellOrder.orderNumber,
+        status: sellOrder.status,
+        totalPrice: sellOrder.totalAmount,
+        createdAt: sellOrder.orderDate,
+        address: { address: sellOrder.address },
+        service: {
+          name: `${sellOrder.deviceName} - Laptop Sell`,
+          deviceType: 'LAPTOP_SELL'
+        },
+        isLaptopSell: true,
+        deviceDetails: {
+          name: sellOrder.deviceName,
+          processor: sellOrder.processor,
+          ram: sellOrder.ram,
+          storage: sellOrder.storage,
+          brand: sellOrder.brand
+        },
+        pickupDate: sellOrder.pickupDate,
+        pickupTimeSlot: sellOrder.pickupTimeSlot,
+        technician: null
+      }));
+      
+      // Try to fetch API orders
+      try {
+        const result = await apiService.getMyOrders();
+        
+        if (result.success && result.data) {
+          // Merge API orders with localStorage sell orders
+          const apiOrders = result.data as Order[];
+          const allOrders = [...transformedSellOrders, ...apiOrders];
+          const sortedOrders = allOrders.sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          setOrders(sortedOrders);
+          console.log('Orders fetched successfully:', sortedOrders);
+        } else {
+          // If API fails, still show localStorage orders
+          setOrders(transformedSellOrders);
+          console.log('Using only localStorage orders:', transformedSellOrders);
+        }
+      } catch (apiError: any) {
+        console.warn('API call failed, using localStorage orders only:', apiError);
+        // If API call fails, still show localStorage orders
+        setOrders(transformedSellOrders);
       }
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       setError(error.message || 'Failed to fetch orders');
+      // Even on error, try to show localStorage orders
+      try {
+        const sellOrders = JSON.parse(localStorage.getItem('laptop_sell_orders') || '[]');
+        if (sellOrders.length > 0) {
+          const transformedOrders = sellOrders.map((sellOrder: any) => ({
+            id: sellOrder.id,
+            orderNumber: sellOrder.orderNumber,
+            status: sellOrder.status,
+            totalPrice: sellOrder.totalAmount,
+            createdAt: sellOrder.orderDate,
+            address: { address: sellOrder.address },
+            service: {
+              name: `${sellOrder.deviceName} - Laptop Sell`,
+              deviceType: 'LAPTOP_SELL'
+            },
+            isLaptopSell: true,
+            technician: null
+          }));
+          setOrders(transformedOrders);
+        }
+      } catch {}
     } finally {
       setIsLoading(false);
     }
@@ -145,6 +208,12 @@ const OrdersHistory = () => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case 'PICKUP_REQUESTED':
+        return (
+          <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        );
       case 'PENDING':
         return (
           <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,6 +306,7 @@ const OrdersHistory = () => {
             className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="All">All Orders</option>
+            <option value="PICKUP_REQUESTED">Pickup Requested</option>
             <option value="PENDING">Pending</option>
             <option value="CONFIRMED">Confirmed</option>
             <option value="IN_PROGRESS">In Progress</option>

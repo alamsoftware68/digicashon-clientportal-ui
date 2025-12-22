@@ -113,6 +113,80 @@ const OrderDetailsViewModal: React.FC<OrderDetailsViewModalProps> = ({
         orderNumber
       );
 
+      // Check if this is a laptop sell order (starts with SL-)
+      if (orderNumber.startsWith('SL-')) {
+        console.log("[OrderDetailsView] This is a laptop sell order, loading from localStorage");
+        
+        const sellOrders = JSON.parse(localStorage.getItem('laptop_sell_orders') || '[]');
+        const sellOrder = sellOrders.find((order: any) => order.orderNumber === orderNumber);
+        
+        if (sellOrder) {
+          // Transform laptop sell order to OrderDetailsResponse format
+          const transformedOrder: OrderDetailsResponse = {
+            id: sellOrder.id,
+            createdAt: sellOrder.orderDate,
+            updatedAt: sellOrder.orderDate,
+            version: 1,
+            orderNumber: sellOrder.orderNumber,
+            status: sellOrder.status,
+            totalPrice: sellOrder.totalAmount,
+            problemDescription: `Laptop Sell Request - ${sellOrder.deviceName}`,
+            scheduledDate: sellOrder.pickupDate,
+            pickupAddress: sellOrder.address,
+            orderItems: [{
+              id: sellOrder.id,
+              createdAt: sellOrder.orderDate,
+              updatedAt: sellOrder.orderDate,
+              version: 1,
+              quantity: 1,
+              unitPrice: sellOrder.totalAmount,
+              totalPrice: sellOrder.totalAmount,
+              notes: `Pickup scheduled for ${sellOrder.pickupDate} (${sellOrder.pickupTimeSlot})`,
+              service: {
+                id: sellOrder.id,
+                createdAt: sellOrder.orderDate,
+                updatedAt: sellOrder.orderDate,
+                version: 1,
+                name: `${sellOrder.deviceName} - Laptop Sell`,
+                description: `${sellOrder.brand || 'Brand'} ${sellOrder.deviceName}\nProcessor: ${sellOrder.processor}\nRAM: ${sellOrder.ram}\nStorage: ${sellOrder.storage}\nPickup Time: ${sellOrder.pickupTimeSlot}`,
+                deviceType: 'LAPTOP_SELL',
+                basePrice: sellOrder.totalAmount,
+                estimatedDurationHours: 1,
+                isActive: true,
+                isFeatured: false
+              },
+              serviceName: `${sellOrder.deviceName} - Laptop Sell`,
+              serviceCategory: 'Laptop Sell',
+              serviceTitle: sellOrder.deviceName
+            }],
+            address: {
+              id: sellOrder.id,
+              createdAt: sellOrder.orderDate,
+              updatedAt: sellOrder.orderDate,
+              version: 1,
+              type: 'Pickup Address',
+              address: sellOrder.address,
+              city: '',
+              state: '',
+              zipCode: '',
+              isDefault: false,
+              fullAddress: sellOrder.address
+            }
+          };
+          
+          setOrderDetails(transformedOrder);
+          console.log(
+            "[OrderDetailsView] Laptop sell order loaded successfully:",
+            transformedOrder
+          );
+          setIsLoading(false);
+          return;
+        } else {
+          throw new Error("Laptop sell order not found");
+        }
+      }
+
+      // Otherwise, fetch from API
       const result = await apiService.getOrderDetails(orderNumber);
 
       if (result.success && result.data) {
@@ -152,6 +226,7 @@ const OrderDetailsViewModal: React.FC<OrderDetailsViewModalProps> = ({
 
   const getStatusColor = (status: string) => {
     const statusColors: { [key: string]: string } = {
+      PICKUP_REQUESTED: "bg-orange-100 text-orange-800 border-orange-200",
       PENDING: "bg-yellow-100 text-yellow-800 border-yellow-200",
       CONFIRMED: "bg-blue-100 text-blue-800 border-blue-200",
       IN_PROGRESS: "bg-purple-100 text-purple-800 border-purple-200",
@@ -164,6 +239,22 @@ const OrderDetailsViewModal: React.FC<OrderDetailsViewModalProps> = ({
 
   const getStatusIcon = (status: string) => {
     switch (status) {
+      case "PICKUP_REQUESTED":
+        return (
+          <svg
+            className="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+        );
       case "PENDING":
         return (
           <svg
@@ -738,6 +829,203 @@ const OrderDetailsViewModal: React.FC<OrderDetailsViewModalProps> = ({
                   </div>
                 </div>
               </div>
+
+              {/* Order Status Progress Tracker - Only for Laptop Sell Orders */}
+              {orderDetails.service?.deviceType === 'LAPTOP_SELL' && (
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-base font-semibold text-gray-900 mb-4">Order Status</h4>
+                  <div className="relative">
+                    {/* Progress Line */}
+                    <div className="absolute top-5 left-0 w-full h-0.5 bg-gray-200">
+                      <div 
+                        className="h-full bg-green-500 transition-all duration-500"
+                        style={{
+                          width: orderDetails.status === 'PICKUP_REQUESTED' ? '25%' :
+                                 orderDetails.status === 'CONFIRMED' ? '58%' :
+                                 orderDetails.status === 'IN_PROGRESS' ? '83%' :
+                                 orderDetails.status === 'COMPLETED' ? '100%' : '0%'
+                        }}
+                      />
+                    </div>
+                    
+                    {/* Progress Steps */}
+                    <div className="relative flex justify-between">
+                      {/* Step 1: Pickup Requested */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                          orderDetails.status === 'PICKUP_REQUESTED' || orderDetails.status === 'CONFIRMED' || orderDetails.status === 'IN_PROGRESS' || orderDetails.status === 'COMPLETED'
+                            ? 'bg-green-500 border-green-500'
+                            : 'bg-white border-gray-300'
+                        }`}>
+                          <svg className={`w-5 h-5 ${
+                            orderDetails.status === 'PICKUP_REQUESTED' || orderDetails.status === 'CONFIRMED' || orderDetails.status === 'IN_PROGRESS' || orderDetails.status === 'COMPLETED'
+                              ? 'text-white'
+                              : 'text-gray-400'
+                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <p className="text-xs font-semibold text-gray-900 mt-2 text-center max-w-[90px]">
+                          Pickup Requested
+                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {formatDate(orderDetails.createdAt).split(',')[0]}
+                        </p>
+                        {orderDetails.status === 'PICKUP_REQUESTED' && (
+                          <span className="mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            Active
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Step 2: Pickup Confirmed */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                          orderDetails.status === 'CONFIRMED' || orderDetails.status === 'IN_PROGRESS' || orderDetails.status === 'COMPLETED'
+                            ? 'bg-green-500 border-green-500'
+                            : 'bg-white border-gray-300'
+                        }`}>
+                          <svg className={`w-5 h-5 ${
+                            orderDetails.status === 'CONFIRMED' || orderDetails.status === 'IN_PROGRESS' || orderDetails.status === 'COMPLETED'
+                              ? 'text-white'
+                              : 'text-gray-400'
+                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <p className="text-xs font-semibold text-gray-900 mt-2 text-center max-w-[90px]">
+                          Pickup Confirmed
+                        </p>
+                        {orderDetails.status === 'CONFIRMED' && (
+                          <span className="mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            Active
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Step 3: Pickup Started */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                          orderDetails.status === 'IN_PROGRESS' || orderDetails.status === 'COMPLETED'
+                            ? 'bg-green-500 border-green-500'
+                            : 'bg-white border-gray-300'
+                        }`}>
+                          <svg className={`w-5 h-5 ${
+                            orderDetails.status === 'IN_PROGRESS' || orderDetails.status === 'COMPLETED'
+                              ? 'text-white'
+                              : 'text-gray-400'
+                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <p className="text-xs font-semibold text-gray-900 mt-2 text-center max-w-[90px]">
+                          Pickup Started
+                        </p>
+                        {orderDetails.status === 'IN_PROGRESS' && (
+                          <span className="mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            Active
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Step 4: Pickup Completed */}
+                      <div className="flex flex-col items-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
+                          orderDetails.status === 'COMPLETED'
+                            ? 'bg-green-500 border-green-500'
+                            : 'bg-white border-gray-300'
+                        }`}>
+                          <svg className={`w-5 h-5 ${
+                            orderDetails.status === 'COMPLETED'
+                              ? 'text-white'
+                              : 'text-gray-400'
+                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                        <p className="text-xs font-semibold text-gray-900 mt-2 text-center max-w-[90px]">
+                          Pickup Completed
+                        </p>
+                        {orderDetails.status === 'COMPLETED' && (
+                          <span className="mt-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                            Completed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status Message */}
+                  {orderDetails.status === 'PICKUP_REQUESTED' && (
+                    <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                      <p className="text-sm text-blue-800">
+                        ✨ <strong>Awesome!</strong> We've received your pickup request. Looking for a pickup ninja for you.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Pickup Date & Time - Only for Laptop Sell Orders */}
+              {orderDetails.service?.deviceType === 'LAPTOP_SELL' && orderDetails.scheduledDate && (
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <h4 className="text-base font-semibold text-gray-900 mb-4">Pickup Date & Time</h4>
+                  
+                  <div className="space-y-3">
+                    {/* Pickup Date */}
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 bg-white border-2 border-gray-300 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base font-semibold text-gray-900">
+                          {orderDetails.scheduledDate}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Pickup Time */}
+                    {orderDetails.orderItems[0]?.notes && (
+                      <div className="flex items-start space-x-3">
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-10 bg-white border-2 border-gray-300 rounded-lg flex items-center justify-center">
+                            <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base font-semibold text-gray-900">
+                            {orderDetails.orderItems[0].notes.split('(')[1]?.replace(')', '') || 'Not specified'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  {orderDetails.status === 'PICKUP_REQUESTED' && (
+                    <div className="flex gap-3 mt-4 pt-4 border-t border-gray-200">
+                      <button
+                        onClick={() => alert('Cancel order functionality - coming soon!')}
+                        className="flex-1 px-4 py-2 text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm"
+                      >
+                        Cancel Order
+                      </button>
+                      <button
+                        onClick={() => alert('Reschedule functionality - coming soon!')}
+                        className="flex-1 px-4 py-2 text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm"
+                      >
+                        Reschedule
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Service Items */}
               <div>

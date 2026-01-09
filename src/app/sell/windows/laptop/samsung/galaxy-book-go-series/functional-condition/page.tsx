@@ -166,9 +166,7 @@ export default function FunctionalConditionPage() {
                         {selected ? "✓" : ""}
                       </span>
                     </div>
-                    <p className="text-[11px] sm:text-xs text-slate-400 group-hover:text-slate-300">
-                      {opt.subtitle}
-                    </p>
+                    <p className="text-[11px] sm:text-xs text-slate-400 group-hover:text-slate-300"></p>
                   </button>
                 );
               })}
@@ -186,7 +184,10 @@ export default function FunctionalConditionPage() {
                     storage: storage ?? "",
                     screenSize: screenSize ?? "",
                     graphics: graphics ?? "",
-                    issues: selectedIssues.length > 0 ? selectedIssues.join(",") : "none",
+                    issues:
+                      selectedIssues.length > 0
+                        ? selectedIssues.join(",")
+                        : "none",
                   });
                   router.push(
                     `/sell/windows/laptop/samsung/galaxy-book-go-series/accessories?${params.toString()}`

@@ -99,9 +99,7 @@ export default function PowerStatusPage() {
                       <span className="block text-sm sm:text-base font-semibold text-white mb-1">
                         {opt.label}
                       </span>
-                      <span className="block text-xs sm:text-sm text-slate-300">
-                        {opt.description}
-                      </span>
+                      <span className="block text-xs sm:text-sm text-slate-300"></span>
                     </span>
                   </button>
                 );

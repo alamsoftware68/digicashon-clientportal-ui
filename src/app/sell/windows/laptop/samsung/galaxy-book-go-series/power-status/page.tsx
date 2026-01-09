@@ -1,15 +1,21 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import WhatsAppButton from '@/components/WhatsAppButton';
+import React, { useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import WhatsAppButton from "@/components/WhatsAppButton";
 
 const options = [
-  { id: 'yes', label: 'Yes', description: 'The laptop powers on and reaches the home or login screen.' },
-  { id: 'no', label: 'No', description: 'The laptop does not power on or has issues starting up.' },
+  {
+    id: "yes",
+    label: "Yes",
+  },
+  {
+    id: "no",
+    label: "No",
+  },
 ];
 
 export default function PowerStatusPage() {
@@ -20,11 +26,13 @@ export default function PowerStatusPage() {
   const handleOptionClick = (id: string) => {
     setSelected(id);
 
-    if (id === 'yes') {
-      router.push('/sell/windows/laptop/samsung/galaxy-book-go-series/system-configuration?power=yes');
+    if (id === "yes") {
+      router.push(
+        "/sell/windows/laptop/samsung/galaxy-book-go-series/system-configuration?power=yes"
+      );
     }
 
-    if (id === 'no') {
+    if (id === "no") {
       setShowNoModal(true);
     }
   };
@@ -42,7 +50,9 @@ export default function PowerStatusPage() {
 
             <header className="relative flex items-center justify-between gap-4 mb-8">
               <div>
-                <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-slate-400 mb-1">Step 1 • Device health</p>
+                <p className="text-[11px] sm:text-xs uppercase tracking-[0.2em] text-slate-400 mb-1">
+                  Step 1 • Device health
+                </p>
                 <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
                   Does your laptop
                   <span className="block bg-gradient-to-r from-cyan-300 via-sky-300 to-teal-200 bg-clip-text text-transparent">
@@ -51,20 +61,16 @@ export default function PowerStatusPage() {
                 </h1>
               </div>
               <div className="hidden sm:flex flex-col items-end text-right text-xs text-slate-400">
-                <span className="text-[10px] uppercase tracking-[0.18em] mb-1">Progress</span>
+                <span className="text-[10px] uppercase tracking-[0.18em] mb-1">
+                  Progress
+                </span>
                 <div className="flex items-center gap-2">
                   <div className="flex h-1.5 w-16 rounded-full bg-slate-700 overflow-hidden">
                     <span className="h-full w-1/3 bg-gradient-to-r from-cyan-400 to-sky-400" />
                   </div>
-                  <span>1 / 3</span>
                 </div>
               </div>
             </header>
-
-            <p className="relative text-sm sm:text-base text-slate-300 mb-6 max-w-2xl">
-              We currently accept laptops that power on without critical boot issues. Tell us if your Galaxy Book
-              Go switches on normally so we can refine your quote.
-            </p>
 
             <div className="relative grid grid-cols-1 sm:grid-cols-2 gap-4">
               {options.map((opt) => {
@@ -75,21 +81,27 @@ export default function PowerStatusPage() {
                     type="button"
                     onClick={() => handleOptionClick(opt.id)}
                     className={`group text-left rounded-2xl border px-4 py-4 sm:px-5 sm:py-5 transition-all duration-200 flex items-start gap-3 sm:gap-4 bg-slate-900/60 hover:bg-slate-800/80 hover:border-cyan-500/60 ${
-                      isActive ? 'border-cyan-400 bg-slate-800/80 shadow-[0_0_0_1px_rgba(34,211,238,0.4)]' : 'border-slate-700'
+                      isActive
+                        ? "border-cyan-400 bg-slate-800/80 shadow-[0_0_0_1px_rgba(34,211,238,0.4)]"
+                        : "border-slate-700"
                     }`}
                   >
                     <span
                       className={`mt-1 flex h-5 w-5 items-center justify-center rounded-full border text-xs transition-colors ${
                         isActive
-                          ? 'border-cyan-400 bg-cyan-400 text-slate-900'
-                          : 'border-slate-500 bg-transparent text-slate-400 group-hover:border-cyan-400 group-hover:text-cyan-300'
+                          ? "border-cyan-400 bg-cyan-400 text-slate-900"
+                          : "border-slate-500 bg-transparent text-slate-400 group-hover:border-cyan-400 group-hover:text-cyan-300"
                       }`}
                     >
-                      {isActive ? '✓' : ''}
+                      {isActive ? "✓" : ""}
                     </span>
                     <span className="flex-1">
-                      <span className="block text-sm sm:text-base font-semibold text-white mb-1">{opt.label}</span>
-                      <span className="block text-xs sm:text-sm text-slate-300">{opt.description}</span>
+                      <span className="block text-sm sm:text-base font-semibold text-white mb-1">
+                        {opt.label}
+                      </span>
+                      <span className="block text-xs sm:text-sm text-slate-300">
+                        {opt.description}
+                      </span>
                     </span>
                   </button>
                 );
@@ -99,7 +111,11 @@ export default function PowerStatusPage() {
             <div className="relative mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-slate-400">
               <p className="flex items-center gap-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-400">
-                  <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+                  <svg
+                    className="h-3.5 w-3.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
                     <path
                       fillRule="evenodd"
                       d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293A1 1 0 006.293 10.707l2 2a1 1 0 001.414 0l4-4z"
@@ -107,7 +123,8 @@ export default function PowerStatusPage() {
                     />
                   </svg>
                 </span>
-                Your answers only affect pricing – they do not create any obligation to sell.
+                Your answers only affect pricing – they do not create any
+                obligation to sell.
               </p>
 
               <div className="flex items-center gap-3 self-end sm:self-auto">
@@ -150,9 +167,10 @@ export default function PowerStatusPage() {
                     </h2>
 
                     <p className="text-sm text-slate-300 leading-relaxed">
-                      At the moment, this program only supports laptops that switch on normally. For guidance on
-                      repairing your Galaxy Book Go or exploring other options, our customer care team will be happy
-                      to help.
+                      At the moment, this program only supports laptops that
+                      switch on normally. For guidance on repairing your Galaxy
+                      Book Go or exploring other options, our customer care team
+                      will be happy to help.
                     </p>
 
                     <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2 text-xs sm:text-sm">
@@ -202,9 +220,15 @@ export default function PowerStatusPage() {
                 />
               </div>
               <div className="flex-1">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">Device evaluation</p>
-                <h2 className="text-sm sm:text-base font-semibold">Galaxy Book Go Series</h2>
-                <p className="text-[11px] text-slate-400">Windows • Samsung laptop</p>
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-1">
+                  Device evaluation
+                </p>
+                <h2 className="text-sm sm:text-base font-semibold">
+                  Galaxy Book Go Series
+                </h2>
+                <p className="text-[11px] text-slate-400">
+                  Windows • Samsung laptop
+                </p>
               </div>
             </header>
 
@@ -220,7 +244,10 @@ export default function PowerStatusPage() {
             </div>
 
             <div className="mt-auto pt-3 border-t border-slate-800/80 text-[11px] sm:text-xs text-slate-400 space-y-2">
-              <p>Next, we&apos;ll ask about display condition, body condition, and accessories to finalize your quote.</p>
+              <p>
+                Next, we&apos;ll ask about display condition, body condition,
+                and accessories to finalize your quote.
+              </p>
               <p className="flex items-center gap-2">
                 <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
                 Honest answers help us keep offers accurate and transparent.

@@ -72,7 +72,7 @@ export default function DeviceAgePage() {
       lines: lines ?? '',
       age,
     });
-    router.push(`/sell/windows/laptop/samsung/galaxy-book-go-series/physical-condition?${params.toString()}`);
+    router.push(`/sell/windows/laptop/samsung/galaxy-book-go-series/laptop-condition?${params.toString()}`);
   };
 
   return (
@@ -121,7 +121,7 @@ export default function DeviceAgePage() {
                           age: next,
                         });
                         router.push(
-                          `/sell/windows/laptop/samsung/galaxy-book-go-series/physical-condition?${params.toString()}`,
+                          `/sell/windows/laptop/samsung/galaxy-book-go-series/laptop-condition?${params.toString()}`,
                         );
                       }
                     }}

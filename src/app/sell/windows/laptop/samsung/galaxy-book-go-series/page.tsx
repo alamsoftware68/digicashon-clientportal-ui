@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import WhatsAppButton from '@/components/WhatsAppButton';
+import React from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
+import WhatsAppButton from "@/components/WhatsAppButton";
 
 export default function GalaxyBookGoSeriesPage() {
   const router = useRouter();
@@ -56,12 +56,6 @@ export default function GalaxyBookGoSeriesPage() {
                 </span>
               </h1>
 
-              <p className="max-w-2xl text-sm sm:text-base text-slate-300 leading-relaxed">
-                Get an instant indicative price for your Samsung Galaxy Book Go laptop. The price below
-                is a starting value for a device in good condition. Tap "Get Exact Value" to answer a few
-                quick questions about your laptop&apos;s configuration and condition.
-              </p>
-
               {/* Device preview card */}
               <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 p-5 sm:p-6 shadow-[0_18px_60px_rgba(15,23,42,0.9)]">
                 <div className="absolute -top-24 -right-24 h-60 w-60 rounded-full bg-cyan-500/20 blur-3xl" />
@@ -90,10 +84,11 @@ export default function GalaxyBookGoSeriesPage() {
                         <span className="text-3xl sm:text-4xl font-semibold text-cyan-300">
                           10,000
                         </span>
-                        <span className="text-xs sm:text-sm text-slate-400 mb-1">estimated</span>
+                        <span className="text-xs sm:text-sm text-slate-400 mb-1">
+                          estimated
+                        </span>
                       </div>
                     </div>
-
                   </div>
                 </div>
               </div>
@@ -104,26 +99,34 @@ export default function GalaxyBookGoSeriesPage() {
               <div className="sticky top-24">
                 <div className="rounded-3xl bg-white text-slate-900 shadow-[0_18px_60px_rgba(15,23,42,0.7)] border border-slate-200 p-5 sm:p-6 space-y-5">
                   <div className="space-y-1">
-                    <h2 className="text-lg sm:text-xl font-semibold tracking-tight">Get Exact Value</h2>
-                    <p className="text-xs sm:text-sm text-slate-600">
-                      Answer a few quick questions about storage, RAM, age, and condition to see the exact
-                      offer for your Galaxy Book Go Series.
-                    </p>
+                    <h2 className="text-lg sm:text-xl font-semibold tracking-tight">
+                      Get Exact Value
+                    </h2>
                   </div>
 
                   <div className="flex items-center justify-between rounded-2xl bg-slate-50 px-3 py-3">
                     <div className="text-xs sm:text-sm text-slate-600">
                       Base estimate
-                      <div className="text-[10px] sm:text-[11px] text-slate-400">For a device in good condition</div>
+                      <div className="text-[10px] sm:text-[11px] text-slate-400">
+                        For a device in good condition
+                      </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-lg sm:text-xl font-semibold text-slate-900">10,000</div>
-                      <div className="text-[11px] text-emerald-600 font-medium">Up to +15% for like‑new</div>
+                      <div className="text-lg sm:text-xl font-semibold text-slate-900">
+                        10,000
+                      </div>
+                      <div className="text-[11px] text-emerald-600 font-medium">
+                        Up to +15% for like‑new
+                      </div>
                     </div>
                   </div>
 
                   <button
-                    onClick={() => router.push('/sell/windows/laptop/samsung/galaxy-book-go-series/power-status')}
+                    onClick={() =>
+                      router.push(
+                        "/sell/windows/laptop/samsung/galaxy-book-go-series/power-status"
+                      )
+                    }
                     className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-600 via-sky-500 to-blue-600 px-4 py-3 text-sm sm:text-base font-semibold text-white shadow-lg shadow-cyan-600/40 hover:shadow-xl hover:shadow-cyan-500/50 transition-all duration-300 hover:-translate-y-[1px]"
                   >
                     <span>Get Exact Value</span>
@@ -145,7 +148,11 @@ export default function GalaxyBookGoSeriesPage() {
                   <div className="space-y-3 border-t border-slate-200 pt-4 mt-2 text-xs sm:text-sm">
                     <div className="flex items-start gap-2">
                       <span className="mt-0.5 text-emerald-500">
-                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <svg
+                          className="h-4 w-4"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
                           <path
                             fillRule="evenodd"
                             d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -153,15 +160,24 @@ export default function GalaxyBookGoSeriesPage() {
                           />
                         </svg>
                       </span>
-                      <p className="text-slate-600">No obligation to sell – you&apos;re free to walk away.</p>
+                      <p className="text-slate-600">
+                        No obligation to sell – you&apos;re free to walk away.
+                      </p>
                     </div>
                     <div className="flex items-start gap-2">
                       <span className="mt-0.5 text-sky-500">
-                        <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <svg
+                          className="h-4 w-4"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
                           <path d="M2.003 5.884L10 2l7.997 3.884v.09c0 4.873-3.134 9.395-7.523 10.894a1.75 1.75 0 01-1.148 0C5.137 15.27 2.003 10.747 2.003 5.974v-.09z" />
                         </svg>
                       </span>
-                      <p className="text-slate-600">Secure process with verified partners and safe data wiping.</p>
+                      <p className="text-slate-600">
+                        Secure process with verified partners and safe data
+                        wiping.
+                      </p>
                     </div>
                   </div>
                 </div>

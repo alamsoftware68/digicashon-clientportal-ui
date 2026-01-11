@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
 import AddressSelectionModal from '@/components/AddressSelectionModal';
 import OrderConfirmationModal from '@/components/OrderConfirmationModal';
+import LoginModal from '@/components/LoginModal';
 import { useAuth, Address } from '@/contexts/AuthContext';
 
 export default function PriceSummaryPage() {
@@ -24,6 +25,8 @@ export default function PriceSummaryPage() {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
   const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [continueAfterLogin, setContinueAfterLogin] = useState(false);
   
   // Calculate total
   const totalAmount = basePrice - processingFee;
@@ -78,12 +81,21 @@ export default function PriceSummaryPage() {
     }
   }, [user, selectedAddress, selectedDate, selectedTimeSlot, pickupDays, timeSlots]);
 
+  // After logging in from this page, automatically open the address selection modal
+  useEffect(() => {
+    if (isLoggedIn && continueAfterLogin) {
+      setContinueAfterLogin(false);
+      setShowLoginModal(false);
+      setShowAddressModal(true);
+    }
+  }, [isLoggedIn, continueAfterLogin]);
+
   const handleAddressSelect = (address: Address) => {
     setSelectedAddress(address);
     setShowAddressModal(false);
   };
   
-  const handleContinue = () => {
+  const placeOrder = () => {
     if (!selectedAddress) {
       alert('Please select a pickup address');
       return;
@@ -136,6 +148,24 @@ export default function PriceSummaryPage() {
     
     // Show confirmation modal
     setShowOrderConfirmation(true);
+  };
+
+  const handleContinue = () => {
+    // If user is not logged in, open login/signup modal first
+    if (!isLoggedIn) {
+      setContinueAfterLogin(true);
+      setShowLoginModal(true);
+      return;
+    }
+
+    // If logged in but no address selected yet, open address selection modal
+    if (!selectedAddress) {
+      setShowAddressModal(true);
+      return;
+    }
+
+    // Logged in and address selected – proceed with existing order flow
+    placeOrder();
   };
 
   return (
@@ -369,7 +399,7 @@ export default function PriceSummaryPage() {
               <button
                 type="button"
                 onClick={handleContinue}
-                disabled={!selectedAddress || !selectedDate || !selectedTimeSlot}
+                disabled={!selectedDate || !selectedTimeSlot}
                 className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-sky-500 text-white text-base font-semibold shadow-lg shadow-emerald-500/40 hover:shadow-emerald-400/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-emerald-500/40 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <span>Continue</span>
@@ -411,6 +441,15 @@ export default function PriceSummaryPage() {
           }}
         />
       )}
+
+      {/* Login / Signup Modal for selling flow */}
+      <LoginModal
+        isOpen={showLoginModal}
+        onClose={() => {
+          setShowLoginModal(false);
+          setContinueAfterLogin(false);
+        }}
+      />
     </div>
   );
 }

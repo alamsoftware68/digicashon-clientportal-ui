@@ -12,6 +12,10 @@ const Header = () => {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isMoreDropdownOpen, setIsMoreDropdownOpen] = useState(false);
+
+  // City detection state
+  const [city, setCity] = useState<string | null>(null);
+  const [isDetectingCity, setIsDetectingCity] = useState(false);
   
   // Cart functionality
   const { getCartItemCount } = useCart();
@@ -25,6 +29,16 @@ const Header = () => {
   useEffect(() => {
     // Mark as hydrated first
     setIsHydrated(true);
+
+    // Try to restore saved city first
+    try {
+      const savedCity = localStorage.getItem('repairapp_user_city');
+      if (savedCity) {
+        setCity(savedCity);
+      }
+    } catch (e) {
+      console.log('City restore failed:', e);
+    }
     
     // Then check auth state
     const checkAuth = () => {
@@ -128,6 +142,73 @@ const Header = () => {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  // Auto-detect city using browser GPS + reverse geocoding (client-side only)
+  useEffect(() => {
+    if (!isHydrated) return;
+    if (city) return; // already have a city from localStorage or user input
+
+    if (!('geolocation' in navigator)) {
+      return; // browser does not support geolocation, fallback is manual entry
+    }
+
+    setIsDetectingCity(true);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
+          // Use OpenStreetMap Nominatim for reverse geocoding
+          const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`;
+          const res = await fetch(url, {
+            headers: {
+              'Accept': 'application/json',
+            },
+          });
+          if (!res.ok) throw new Error('Failed to reverse geocode city');
+          const data = await res.json();
+          const detectedCity = data.address?.city || data.address?.town || data.address?.village || data.address?.state;
+          if (detectedCity) {
+            setCity(detectedCity);
+            try {
+              localStorage.setItem('repairapp_user_city', detectedCity);
+            } catch (e) {
+              console.log('City persist failed:', e);
+            }
+          }
+        } catch (err) {
+          console.log('City detection failed:', err);
+        } finally {
+          setIsDetectingCity(false);
+        }
+      },
+      (error) => {
+        console.log('Geolocation error:', error);
+        setIsDetectingCity(false);
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000,
+      }
+    );
+  }, [isHydrated, city]);
+  
+  const handleCityClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const current = city || '';
+    const manual = window.prompt('Enter your city name', current);
+    if (manual && manual.trim()) {
+      const trimmed = manual.trim();
+      setCity(trimmed);
+      try {
+        localStorage.setItem('repairapp_user_city', trimmed);
+      } catch (err) {
+        console.log('City persist failed:', err);
+      }
+    }
+  };
+  
   // Show skeleton only during initial hydration
   if (!isHydrated) {
     return (
@@ -196,11 +277,14 @@ const Header = () => {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <button className="flex items-center text-gray-700 hover:text-gray-900 text-sm">
+            <button
+              className="flex items-center text-gray-700 hover:text-gray-900 text-sm"
+              onClick={handleCityClick}
+            >
               <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
               </svg>
-              Select City
+              {city ? city : isDetectingCity ? 'Detecting city...' : 'Select City'}
             </button>
             
             <Link href="/quick-call" className="text-gray-700 hover:text-gray-900 text-sm">

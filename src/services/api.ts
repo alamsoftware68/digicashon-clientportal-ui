@@ -1312,6 +1312,536 @@ class ApiService {
 
     return this.handleResponse(response);
   }
+
+  // ========================================
+  // Device Configuration APIs
+  // ========================================
+
+  /**
+   * Get all enabled brands
+   * Optionally filter by type (e.g., "Laptop", "Mobile")
+   */
+  async getBrands(type?: string) {
+    try {
+      console.log('[API] Fetching brands', type ? `for type: ${type}` : '');
+      const url = type
+        ? `${this.baseUrl}/devices/config/brands?type=${encodeURIComponent(type)}`
+        : `${this.baseUrl}/devices/config/brands`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        name: string;
+        brandType: string;
+        iconUrl: string | null;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get brands error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch brands',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get all enabled models for a specific brand
+   */
+  async getBrandModels(brandId: number, type?: string) {
+    try {
+      console.log('[API] Fetching models for brand ID:', brandId, 'type:', type);
+      const url = type
+        ? `${this.baseUrl}/devices/config/brands/${brandId}/models?type=${encodeURIComponent(type)}`
+        : `${this.baseUrl}/devices/config/brands/${brandId}/models`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        name: string;
+        description: string;
+        brandId: number;
+        iconUrl: string | null;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get brand models error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch brand models',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get all enabled processors
+   */
+  async getProcessors() {
+    try {
+      console.log('[API] Fetching processors');
+      const response = await fetch(`${this.baseUrl}/devices/config/processors`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        processorName: string;
+        brand: string;
+        generation: string;
+        coreCount: number;
+        baseClockSpeed: number;
+        priceImpact: number;
+        displayOrder: number;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get processors error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch processors',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get all enabled graphics cards
+   */
+  async getGraphicsCards() {
+    try {
+      console.log('[API] Fetching graphics cards');
+      const response = await fetch(`${this.baseUrl}/devices/config/graphics`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        graphicsName: string;
+        brand: string;
+        vramGb: number;
+        priceImpact: number;
+        displayOrder: number;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get graphics cards error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch graphics cards',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get all enabled RAM options
+   */
+  async getRamOptions() {
+    try {
+      console.log('[API] Fetching RAM options');
+      const response = await fetch(`${this.baseUrl}/devices/config/ram-options`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        capacityLabel: string;
+        capacityMb: number;
+        ramType: string;
+        priceImpact: number;
+        displayOrder: number;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get RAM options error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch RAM options',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get all enabled storage options
+   */
+  async getStorageOptions() {
+    try {
+      console.log('[API] Fetching storage options');
+      const response = await fetch(`${this.baseUrl}/devices/config/storage-options`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        storageLabel: string;
+        storageType: string;
+        capacityGb: number;
+        priceImpact: number;
+        displayOrder: number;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get storage options error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch storage options',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get all enabled screen sizes
+   */
+  async getScreenSizes() {
+    try {
+      console.log('[API] Fetching screen sizes');
+      const response = await fetch(`${this.baseUrl}/devices/config/screen-sizes`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        sizeLabel: string;
+        minInches: number;
+        maxInches: number;
+        priceImpact: number;
+        displayOrder: number;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get screen sizes error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch screen sizes',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get all enabled device conditions
+   */
+  async getConditionMultipliers() {
+    try {
+      console.log('[API] Fetching condition multipliers');
+      const response = await fetch(`${this.baseUrl}/devices/config/conditions`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        conditionCode: string;
+        conditionLabel: string;
+        multiplierPercentage: number;
+        requiresInvoice: boolean;
+        minDeviceAgeMonths: number;
+        maxDeviceAgeMonths: number;
+        displayOrder: number;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get condition multipliers error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch condition multipliers',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get all enabled age depreciation options
+   */
+  async getAgeDepreciationOptions() {
+    try {
+      console.log('[API] Fetching age depreciation options');
+      const response = await fetch(`${this.baseUrl}/devices/config/age-options`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        ageCode: string;
+        ageLabel: string;
+        minMonths: number;
+        maxMonths: number;
+        depreciationPercentage: number;
+        displayOrder: number;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get age depreciation options error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch age depreciation options',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get all enabled functional issues
+   */
+  async getFunctionalIssues() {
+    try {
+      console.log('[API] Fetching functional issues');
+      const response = await fetch(`${this.baseUrl}/devices/config/functional-issues`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        issueCode: string;
+        issueLabel: string;
+        priceDeduction: number;
+        severity: string;
+        displayOrder: number;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get functional issues error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch functional issues',
+        data: undefined
+      };
+    }
+  }
+
+  // ========================================
+  // Device Evaluation APIs
+  // ========================================
+
+  /**
+   * Calculate device price based on specifications and condition
+   */
+  async calculateDevicePrice(evaluationData: {
+    userId: number;
+    superCategory: string;
+    category: string;
+    brandId: number;
+    brandModelId: number;
+    processorId: number;
+    graphicsId?: number;
+    ramId: number;
+    storageId: number;
+    screenSizeId?: number;
+    conditionCode: string;
+    hasInvoice: boolean;
+    hasBox: boolean;
+    ageCode: string;
+    ageMonths?: number;
+    functionalIssueIds?: number[];
+    notes?: string;
+  }) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+    try {
+      console.log('[API] Calculating device price:', evaluationData);
+      const response = await fetch(`${this.baseUrl}/devices/evaluations/calculate`, {
+        method: 'POST',
+        ...this.getFetchOptions(false),
+        body: JSON.stringify(evaluationData),
+        signal: controller.signal,
+      });
+
+      return this.handleResponse<{
+        id: number;
+        userId: number;
+        superCategory: string;
+        category: string;
+        brandId: number;
+        brandName: string;
+        brandModelId: number;
+        brandModelName: string;
+        processorId: number;
+        processorName: string;
+        graphicsId?: number;
+        graphicsName?: string;
+        ramId: number;
+        ramLabel: string;
+        storageId: number;
+        storageLabel: string;
+        screenSizeId?: number;
+        screenSizeLabel?: string;
+        conditionCode: string;
+        hasInvoice: boolean;
+        hasBox: boolean;
+        ageCode: string;
+        ageMonths?: number;
+        functionalIssues: {
+          issueId: number;
+          issueCode: string;
+          issueLabel: string;
+          priceDeduction: number;
+          severity: string;
+        }[];
+        priceBreakdown: {
+          basePrice: number;
+          specImpact: number;
+          conditionMultiplier: number;
+          ageDepreciation: number;
+          issueDeductions: number;
+          invoicePremium: number;
+          boxPremium: number;
+          processingFee: number;
+        };
+        finalPrice: number;
+        status: string;
+        notes?: string;
+        createdAt: string;
+        updatedAt: string;
+      }>(response);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout. Please check your connection and try again.');
+      }
+      console.error('[API] Calculate device price error:', error);
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
+   * Get evaluation by ID
+   */
+  async getDeviceEvaluation(evaluationId: number) {
+    try {
+      console.log('[API] Fetching device evaluation:', evaluationId);
+      const response = await fetch(`${this.baseUrl}/devices/evaluations/${evaluationId}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse(response);
+    } catch (error: any) {
+      console.error('[API] Get device evaluation error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch device evaluation',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Get user's device evaluations
+   */
+  async getUserDeviceEvaluations(userId: number, status?: string) {
+    try {
+      console.log('[API] Fetching user device evaluations');
+      const url = status
+        ? `${this.baseUrl}/devices/evaluations/user/${userId}?status=${status}`
+        : `${this.baseUrl}/devices/evaluations/user/${userId}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse(response);
+    } catch (error: any) {
+      console.error('[API] Get user device evaluations error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch user device evaluations',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Approve a device evaluation (user accepts the price)
+   */
+  async approveDeviceEvaluation(evaluationId: number) {
+    try {
+      console.log('[API] Approving device evaluation:', evaluationId);
+      const response = await fetch(`${this.baseUrl}/devices/evaluations/${evaluationId}/approve`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse(response);
+    } catch (error: any) {
+      console.error('[API] Approve device evaluation error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to approve device evaluation',
+        data: undefined
+      };
+    }
+  }
+
+  /**
+   * Reject a device evaluation (user declines the price)
+   */
+  async rejectDeviceEvaluation(evaluationId: number) {
+    try {
+      console.log('[API] Rejecting device evaluation:', evaluationId);
+      const response = await fetch(`${this.baseUrl}/devices/evaluations/${evaluationId}/reject`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse(response);
+    } catch (error: any) {
+      console.error('[API] Reject device evaluation error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to reject device evaluation',
+        data: undefined
+      };
+    }
+  }
 }
 
 // Create singleton instance

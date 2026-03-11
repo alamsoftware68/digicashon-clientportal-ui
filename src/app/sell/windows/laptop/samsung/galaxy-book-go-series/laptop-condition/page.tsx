@@ -1,47 +1,51 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
-
-const allConditionOptions = [
-  {
-    id: "like-new",
-    title: "Like New - Zero Scratches",
-    description: "Device looks brand new with no visible wear or scratches",
-    minAge: 0, // Only show if less than 1 year
-  },
-  {
-    id: "good",
-    title: "Good - Minor Scratches",
-    description: "Few light scratches that are barely noticeable",
-    minAge: 0, // Show for all ages
-  },
-  {
-    id: "average",
-    title: "Average - Major Scratches",
-    description: "Visible scratches and signs of regular use",
-    minAge: 0, // Show for all ages
-  },
-  {
-    id: "below-average",
-    title: "Below Average",
-    description: "Significant wear, scratches, or cosmetic damage",
-    minAge: 0, // Show for all ages
-  },
-];
+import apiService from "@/services/api";
 
 export default function LaptopConditionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [selectedCondition, setSelectedCondition] = useState<string | null>(null);
   const [isMobileDialogOpen, setIsMobileDialogOpen] = useState(false);
   const [mobileNumber, setMobileNumber] = useState("");
   const [mobileError, setMobileError] = useState("");
+  const [allConditionOptions, setAllConditionOptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchConditionOptions() {
+      try {
+        setLoading(true);
+        const response = await apiService.getConditionMultipliers();
+        if (response.success && response.data) {
+          const mappedConditions = response.data.map((condition: any) => ({
+            id: condition.conditionCode,
+            title: condition.conditionLabel,
+            description: `${condition.multiplierPercentage}% of base value`,
+            requiresInvoice: condition.requiresInvoice,
+            minAge: condition.minDeviceAgeMonths || 0,
+            apiId: condition.id,
+          }));
+          setAllConditionOptions(mappedConditions);
+        } else {
+          setError(response.message || 'Failed to load condition options');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load condition options');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchConditionOptions();
+  }, []);
 
   const canContinue = selectedCondition !== null;
 
@@ -65,7 +69,44 @@ export default function LaptopConditionPage() {
     }
     // If invoice=No (coming directly from accessories) OR age is "1-3" or "gt-3", show only 3 options (exclude "Like New")
     return allConditionOptions.filter(opt => opt.id !== "like-new");
-  }, [deviceAge]);
+  }, [deviceAge, allConditionOptions]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto"></div>
+            <p className="mt-4 text-slate-400">Loading condition options...</p>
+          </div>
+        </div>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">

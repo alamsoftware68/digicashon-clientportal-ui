@@ -1,34 +1,47 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
-
-const ageOptions = [
-  {
-    id: 'lt-1',
-    label: 'Less than 1 year',
-    description: 'Usually still under manufacturer warranty. Invoice may be required.',
-  },
-  {
-    id: '1-3',
-    label: 'Between 1 and 3 years',
-    description: 'Typical everyday usage with moderate wear and tear.',
-  },
-  {
-    id: 'gt-3',
-    label: 'More than 3 years',
-    description: 'Older device – value depends more on condition than age.',
-  },
-];
+import apiService from '@/services/api';
 
 export default function DeviceAgePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [age, setAge] = useState<string | null>(null);
+  const [ageOptions, setAgeOptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchAgeOptions() {
+      try {
+        setLoading(true);
+        const response = await apiService.getAgeDepreciationOptions();
+        if (response.success && response.data) {
+          const mappedAges = response.data.map((age: any) => ({
+            id: age.ageCode,
+            label: age.ageLabel,
+            description: `${age.depreciationPercentage}% value retained`,
+            minMonths: age.minMonths,
+            maxMonths: age.maxMonths,
+            apiId: age.id,
+          }));
+          setAgeOptions(mappedAges);
+        } else {
+          setError(response.message || 'Failed to load age options');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load age options');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchAgeOptions();
+  }, []);
 
   const canContinue = Boolean(age);
 
@@ -55,6 +68,43 @@ export default function DeviceAgePage() {
     const found = ageOptions.find((o) => o.id === age);
     return found?.label ?? 'Not selected';
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+            <p className="mt-4 text-slate-400">Loading device age options...</p>
+          </div>
+        </div>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
 
   const handleContinue = () => {
     if (!age) return;

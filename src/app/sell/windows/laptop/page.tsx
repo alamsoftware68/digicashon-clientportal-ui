@@ -1,27 +1,65 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
+import apiService from '@/services/api';
 
 export default function SellWindowsLaptop() {
   const router = useRouter();
+  const [brands, setBrands] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const brands = [
-    { name: 'Samsung', color: 'from-blue-500 to-blue-700', logo: '/images/Samsung.png' },
-    { name: 'Dell', color: 'from-cyan-500 to-cyan-700', logo: '/images/Dell.png' },
-    { name: 'HP', color: 'from-indigo-500 to-indigo-700', logo: '/images/HP.png' },
-    { name: 'Lenovo', color: 'from-red-500 to-red-700', logo: '/images/Lenovo.jpg' },
-    { name: 'Asus', color: 'from-purple-500 to-purple-700', logo: '/images/ASUS.png' },
-    { name: 'Acer', color: 'from-green-500 to-green-700', logo: '/images/Acer.png' },
-    { name: 'Microsoft', color: 'from-blue-600 to-indigo-700', logo: '/images/Microsoft.png' },
-    { name: 'MSI', color: 'from-gray-700 to-black', logo: '/images/MSI.png' },
-    { name: 'Other Brands', color: 'from-orange-500 to-red-600', logo: null },
-  ];
+  useEffect(() => {
+    async function fetchBrands() {
+      try {
+        setLoading(true);
+        const response = await apiService.getBrands('Laptop');
+        if (response.success && response.data) {
+          setBrands(response.data);
+        } else {
+          setError(response.message || 'Failed to load brands');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load brands');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchBrands();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading brands...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -64,50 +102,66 @@ export default function SellWindowsLaptop() {
 
           {/* Brand Selection Grid */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 max-w-6xl mx-auto">
-            {brands.map((brand) => (
-              <Link 
-                key={brand.name} 
-                href={`/sell/windows/laptop/${brand.name.toLowerCase().replace(' ', '-')}`}
-                className="group"
-              >
-                <div className="relative bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-105 hover:-translate-y-1 h-full">
-                  {/* Background Gradient */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${brand.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-                  
-                  {/* Content */}
-                  <div className="relative p-6 flex flex-col items-center justify-center h-full min-h-[140px]">
-                    {/* Logo */}
-                    <div className="group-hover:scale-110 transition-transform duration-300">
-                      {brand.logo ? (
-                        <Image 
-                          src={brand.logo} 
-                          alt={brand.name} 
-                          width={100} 
-                          height={100} 
-                          className="object-contain"
-                        />
-                      ) : (
-                        <div className="flex flex-col items-center">
-                          <div className="mb-3">
-                            <div className="w-20 h-20 mx-auto bg-gradient-to-br from-orange-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg group-hover:bg-white/20 transition-all duration-300">
-                              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                              </svg>
+            {brands.map((brand, index) => {
+              // Generate gradient colors dynamically based on index
+              const gradientColors = [
+                'from-blue-500 to-blue-700',
+                'from-cyan-500 to-cyan-700',
+                'from-indigo-500 to-indigo-700',
+                'from-red-500 to-red-700',
+                'from-purple-500 to-purple-700',
+                'from-green-500 to-green-700',
+                'from-blue-600 to-indigo-700',
+                'from-gray-700 to-black',
+                'from-orange-500 to-red-600',
+              ];
+              const brandColor = gradientColors[index % gradientColors.length];
+
+              return (
+                <Link
+                  key={brand.id}
+                  href={`/sell/windows/laptop/${brand.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  className="group"
+                >
+                  <div className="relative bg-white rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-105 hover:-translate-y-1 h-full">
+                    {/* Background Gradient */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${brandColor} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+
+                    {/* Content */}
+                    <div className="relative p-6 flex flex-col items-center justify-center h-full min-h-[140px]">
+                      {/* Logo */}
+                      <div className="group-hover:scale-110 transition-transform duration-300">
+                        {brand.iconUrl ? (
+                          <Image
+                            src={brand.iconUrl}
+                            alt={brand.name}
+                            width={100}
+                            height={100}
+                            className="object-contain"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center">
+                            <div className="mb-3">
+                              <div className={`w-20 h-20 mx-auto bg-gradient-to-br ${brandColor} rounded-xl flex items-center justify-center shadow-lg group-hover:bg-white/20 transition-all duration-300`}>
+                                <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                </svg>
+                              </div>
                             </div>
+                            <h3 className="text-lg font-bold text-gray-800 group-hover:text-white transition-colors duration-300 text-center">
+                              {brand.name}
+                            </h3>
                           </div>
-                          <h3 className="text-lg font-bold text-gray-800 group-hover:text-white transition-colors duration-300 text-center">
-                            {brand.name}
-                          </h3>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
+
+                    {/* Decorative Corner */}
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-white/20 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
-                  
-                  {/* Decorative Corner */}
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-white/20 to-transparent rounded-bl-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
 
           {/* Info Section */}

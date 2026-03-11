@@ -1,159 +1,41 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import apiService from "@/services/api";
 
-// Complete processor list as per requirements
-const processorOptions = [
-  "Intel Core i3 6th Gen",
-  "Intel Core i3 7th Gen",
-  "Intel Core i3 8th Gen",
-  "Intel Core i3 9th Gen",
-  "Intel Core i3 10th Gen",
-  "Intel Core i3 11th Gen",
-  "Intel Core i3 12th Gen",
-  "Intel Core i3 13th Gen",
-  "Intel Core i3 14th Gen",
-  "Intel Core i5 6th Gen",
-  "Intel Core i5 7th Gen",
-  "Intel Core i5 8th Gen",
-  "Intel Core i5 9th Gen",
-  "Intel Core i5 10th Gen",
-  "Intel Core i5 11th Gen",
-  "Intel Core i5 12th Gen",
-  "Intel Core i5 13th Gen",
-  "Intel Core i5 14th Gen",
-  "Intel Core i7 6th Gen",
-  "Intel Core i7 7th Gen",
-  "Intel Core i7 8th Gen",
-  "Intel Core i7 9th Gen",
-  "Intel Core i7 10th Gen",
-  "Intel Core i7 11th Gen",
-  "Intel Core i7 12th Gen",
-  "Intel Core i7 13th Gen",
-  "Intel Core i7 14th Gen",
-  "Intel Core i9 6th Gen",
-  "Intel Core i9 7th Gen",
-  "Intel Core i9 8th Gen",
-  "Intel Core i9 9th Gen",
-  "Intel Core i9 10th Gen",
-  "Intel Core i9 11th Gen",
-  "Intel Core i9 12th Gen",
-  "Intel Core i9 13th Gen",
-  "Intel Core i9 14th Gen",
-  "Intel Core Ultra 5",
-  "Intel Core Ultra 5 2nd Gen",
-  "Intel Core Ultra 7",
-  "Intel Core Ultra 7 2nd Gen",
-];
+// Quick select options for RAM (most common)
+const quickRamOptions = ["4 GB", "8 GB", "16 GB", "32 GB", "Other"];
 
-// Graphics options as per requirements
-const graphicsOptions = [
-  "No graphics",
-  "4 GB Graphic GTX 1650",
-  "6 GB Graphic GTX 1660",
-  "8 GB Graphic GTX 1680",
-  "4 GB Graphic RTX 2050",
-  "6 GB Graphic RTX 2060",
-  "8 GB Graphic RTX 2070/2080",
-  "4 GB Graphic RTX 3050",
-  "6 GB Graphic RTX 3060",
-  "8 GB Graphic RTX 3070/3080",
-  "6 GB Graphic RTX 4050",
-  "8 GB Graphic RTX 4060/4070",
-  "12 GB Graphic RTX 4080",
-  "8 GB Graphic RTX 5050/5060",
-  "12 GB Graphic RTX 5070",
-  "Radeon RX 5000 Series",
-  "Radeon RX 6000 Series",
-  "Radeon RX 7000 Series",
-];
-
-// Screen size options
-const screenSizeOptions = [
-  { id: "10-11", label: "10–11 inch" },
-  { id: "12-13", label: "12–13 inch" },
-  { id: "14-15", label: "14–15 inch" },
-  { id: "above-15", label: "Above 15 inch" },
-];
-
-const ramOptions = ["4 GB", "8 GB", "16 GB", "32 GB", "Other"];
-const allRamOptions = [
-  "512 MB",
-  "1 GB",
-  "1.5 GB",
-  "2 GB",
-  "3 GB",
-  "4 GB",
-  "6 GB",
-  "8 GB",
-  "10 GB",
-  "12 GB",
-  "16 GB",
-  "18 GB",
-  "20 GB",
-  "24 GB",
-  "32 GB",
-  "36 GB",
-  "48 GB",
-  "64 GB",
-  "96 GB",
-];
-
-const storageOptions = [
+// Quick select options for Storage (most common)
+const quickStorageOptions = [
   "128 GB SSD",
   "256 GB SSD",
   "512 GB SSD",
   "1 TB SSD",
   "Other",
 ];
-const allStorageOptions = [
-  "60 GB HDD",
-  "160 GB HDD",
-  "80 GB HDD",
-  "100 GB HDD",
-  "120 GB HDD",
-  "200 GB HDD",
-  "250 GB HDD",
-  "320 GB HDD",
-  "500 GB HDD",
-  "640 GB HDD",
-  "750 GB HDD",
-  "1 TB HDD",
-  "1.5 GB HDD",
-  "2 TB HDD",
-  "32 GB SSD",
-  "64 GB SSD",
-  "128 GB SSD",
-  "256 GB SSD",
-  "512 GB SSD",
-  "1 TB SSD",
-  "1.5 TB SSD",
-  "2 TB SSD",
-  "320 GB + 64 GB SSD",
-  "320 GB HDD + 128 GB SSD",
-  "320 GB HDD + 256 GB SSD",
-  "500 GB HDD + 32 GB SSD",
-  "500 GB HDD + 128 GB SSD",
-  "500 GB HDD + 256 GB SSD",
-  "1 TB HDD + 128 GB SSD",
-  "1 TB HDD + 256 GB SSD",
-  "1 TB HDD + 512 GB SSD",
-  "2 TB HDD + 128 GB SSD",
-  "2 TB HDD + 256 GB SSD",
-  "2 TB HDD + 512 GB SSD",
-];
 
 export default function SystemConfigurationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
+  // Configuration states
+  const [processors, setProcessors] = useState<any[]>([]);
+  const [graphics, setGraphics] = useState<any[]>([]);
+  const [ramOptions, setRamOptions] = useState<any[]>([]);
+  const [storageOptions, setStorageOptions] = useState<any[]>([]);
+  const [screenSizes, setScreenSizes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // User selections
   const [processor, setProcessor] = useState<string | null>(null);
-  const [graphics, setGraphics] = useState<string | null>(null);
+  const [graphicsCard, setGraphicsCard] = useState<string | null>(null);
   const [screenSize, setScreenSize] = useState<string | null>(null);
   const [touchScreen, setTouchScreen] = useState<string | null>(null);
   const [ram, setRam] = useState<string | null>(null);
@@ -162,8 +44,50 @@ export default function SystemConfigurationPage() {
   const [showRamModal, setShowRamModal] = useState(false);
   const [showStorageModal, setShowStorageModal] = useState(false);
 
+  // Fetch all configuration data on mount
+  useEffect(() => {
+    async function fetchConfigurations() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [processorsRes, graphicsRes, ramRes, storageRes, screenRes] = await Promise.all([
+          apiService.getProcessors(),
+          apiService.getGraphicsCards(),
+          apiService.getRamOptions(),
+          apiService.getStorageOptions(),
+          apiService.getScreenSizes()
+        ]);
+
+        if (processorsRes.success && processorsRes.data) {
+          setProcessors(processorsRes.data);
+        }
+        if (graphicsRes.success && graphicsRes.data) {
+          setGraphics(graphicsRes.data);
+        }
+        if (ramRes.success && ramRes.data) {
+          setRamOptions(ramRes.data);
+        }
+        if (storageRes.success && storageRes.data) {
+          setStorageOptions(storageRes.data);
+        }
+        if (screenRes.success && screenRes.data) {
+          setScreenSizes(screenRes.data);
+        }
+
+        setLoading(false);
+      } catch (err: any) {
+        console.error('Error fetching configurations:', err);
+        setError(err.message || 'Failed to load configurations');
+        setLoading(false);
+      }
+    }
+
+    fetchConfigurations();
+  }, []);
+
   const canContinue = Boolean(
-    processor && graphics && screenSize && touchScreen && ram && storage
+    processor && graphicsCard && screenSize && touchScreen && ram && storage
   );
 
   const powerStatus = searchParams.get("power") ?? "yes";
@@ -183,6 +107,54 @@ export default function SystemConfigurationPage() {
     }
     setStorage(item);
   };
+
+  // If loading or error, show appropriate UI
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <main className="pt-24 pb-20">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-center items-center py-20">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+                <p className="text-slate-400">Loading system configurations...</p>
+              </div>
+            </div>
+          </div>
+        </main>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <main className="pt-24 pb-20">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="bg-red-900/20 border border-red-500/30 rounded-2xl p-8 text-center">
+              <svg className="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-xl font-semibold text-red-300 mb-2">Failed to Load Configurations</h3>
+              <p className="text-red-400 mb-6">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-red-600 text-white px-6 py-3 rounded-xl hover:bg-red-700 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          </div>
+        </main>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -240,9 +212,9 @@ export default function SystemConfigurationPage() {
                 <option value="" disabled>
                   Select processor...
                 </option>
-                {processorOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
+                {processors.map((item) => (
+                  <option key={item.id} value={item.processorName}>
+                    {item.processorName}
                   </option>
                 ))}
               </select>
@@ -261,16 +233,16 @@ export default function SystemConfigurationPage() {
                 </span>
               </div>
               <select
-                value={graphics ?? ""}
-                onChange={(e) => setGraphics(e.target.value)}
+                value={graphicsCard ?? ""}
+                onChange={(e) => setGraphicsCard(e.target.value)}
                 className="w-full rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-3 text-sm text-slate-200 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20 transition-all"
               >
                 <option value="" disabled>
                   Select graphics card...
                 </option>
-                {graphicsOptions.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
+                {graphics.map((item) => (
+                  <option key={item.id} value={item.graphicsName}>
+                    {item.graphicsName}
                   </option>
                 ))}
               </select>
@@ -289,20 +261,20 @@ export default function SystemConfigurationPage() {
                 </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {screenSizeOptions.map((opt) => {
-                  const selected = screenSize === opt.id;
+                {screenSizes.map((opt) => {
+                  const selected = screenSize === opt.sizeLabel;
                   return (
                     <button
                       key={opt.id}
                       type="button"
-                      onClick={() => setScreenSize(opt.id)}
+                      onClick={() => setScreenSize(opt.sizeLabel)}
                       className={`rounded-xl border px-4 py-2.5 text-xs sm:text-sm font-medium transition-all duration-150 shadow-sm hover:-translate-y-0.5 hover:shadow-lg hover:border-cyan-400/70 hover:bg-slate-800/80 ${
                         selected
                           ? "border-cyan-400 bg-cyan-500/10 text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.5)]"
                           : "border-slate-700 bg-slate-900/70 text-slate-200"
                       }`}
                     >
-                      {opt.label}
+                      {opt.sizeLabel}
                     </button>
                   );
                 })}
@@ -353,7 +325,7 @@ export default function SystemConfigurationPage() {
                 </span>
               </div>
               <div className="flex flex-wrap gap-2.5">
-                {ramOptions.map((item) => {
+                {quickRamOptions.map((item) => {
                   const selected = ram === item;
                   return (
                     <button
@@ -386,7 +358,7 @@ export default function SystemConfigurationPage() {
                 </span>
               </div>
               <div className="flex flex-wrap gap-2.5">
-                {storageOptions.map((item) => {
+                {quickStorageOptions.map((item) => {
                   const selected = storage === item;
                   return (
                     <button
@@ -414,7 +386,7 @@ export default function SystemConfigurationPage() {
                 onClick={() => {
                   if (
                     !processor ||
-                    !graphics ||
+                    !graphicsCard ||
                     !screenSize ||
                     !touchScreen ||
                     !ram ||
@@ -424,7 +396,7 @@ export default function SystemConfigurationPage() {
                   const params = new URLSearchParams({
                     power: powerStatus,
                     processor,
-                    graphics,
+                    graphics: graphicsCard,
                     screenSize,
                     touchScreen,
                     ram,
@@ -475,14 +447,14 @@ export default function SystemConfigurationPage() {
                     </header>
 
                     <div className="grid grid-cols-2 gap-2">
-                      {allRamOptions.map((item) => {
-                        const selected = ram === item;
+                      {ramOptions.map((item) => {
+                        const selected = ram === item.capacityLabel;
                         return (
                           <button
-                            key={item}
+                            key={item.id}
                             type="button"
                             onClick={() => {
-                              setRam(item);
+                              setRam(item.capacityLabel);
                               setShowRamModal(false);
                             }}
                             className={`flex items-center justify-between gap-2 rounded-2xl border px-3 py-2 text-left text-xs sm:text-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg hover:border-cyan-400/70 hover:bg-slate-800/80 ${
@@ -491,7 +463,7 @@ export default function SystemConfigurationPage() {
                                 : "border-slate-700 bg-slate-900/70 text-slate-200"
                             }`}
                           >
-                            <span className="flex-1 truncate">{item}</span>
+                            <span className="flex-1 truncate">{item.capacityLabel}</span>
                             <span
                               className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${
                                 selected
@@ -542,14 +514,14 @@ export default function SystemConfigurationPage() {
                     </header>
 
                     <div className="space-y-2">
-                      {allStorageOptions.map((item) => {
-                        const selected = storage === item;
+                      {storageOptions.map((item) => {
+                        const selected = storage === item.storageLabel;
                         return (
                           <button
-                            key={item}
+                            key={item.id}
                             type="button"
                             onClick={() => {
-                              setStorage(item);
+                              setStorage(item.storageLabel);
                               setShowStorageModal(false);
                             }}
                             className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-xs sm:text-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-lg hover:border-cyan-400/70 hover:bg-slate-800/80 ${
@@ -558,7 +530,7 @@ export default function SystemConfigurationPage() {
                                 : "border-slate-700 bg-slate-900/70 text-slate-200"
                             }`}
                           >
-                            <span className="flex-1 truncate">{item}</span>
+                            <span className="flex-1 truncate">{item.storageLabel}</span>
                             <span
                               className={`flex h-4 w-4 items-center justify-center rounded-full border text-[10px] ${
                                 selected
@@ -632,16 +604,13 @@ export default function SystemConfigurationPage() {
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Graphics</span>
                 <span className="font-semibold text-slate-100 text-right max-w-[55%] truncate">
-                  {graphics ?? "Not selected"}
+                  {graphicsCard ?? "Not selected"}
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Screen Size</span>
                 <span className="font-semibold text-slate-100">
-                  {screenSize
-                    ? screenSizeOptions.find((opt) => opt.id === screenSize)
-                        ?.label
-                    : "Not selected"}
+                  {screenSize ?? "Not selected"}
                 </span>
               </div>
               <div className="flex items-center justify-between">

@@ -10,16 +10,16 @@ import AddressSelectionModal from '@/components/AddressSelectionModal';
 import OrderConfirmationModal from '@/components/OrderConfirmationModal';
 import LoginModal from '@/components/LoginModal';
 import { useAuth, Address } from '@/contexts/AuthContext';
+import apiService from '@/services/api';
 
 export default function PriceSummaryPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isLoggedIn, user } = useAuth();
-  
-  const [basePrice] = useState(200);
-  const [pickupCharges] = useState(100);
-  const [processingFee] = useState(49);
-  const [discount] = useState(100);
+
+  const [priceEvaluation, setPriceEvaluation] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>('');
@@ -27,9 +27,17 @@ export default function PriceSummaryPage() {
   const [showOrderConfirmation, setShowOrderConfirmation] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [continueAfterLogin, setContinueAfterLogin] = useState(false);
-  
-  // Calculate total
-  const totalAmount = basePrice - processingFee;
+
+  // Calculate total from price evaluation
+  const basePrice = priceEvaluation?.priceBreakdown?.basePrice || 0;
+  const specImpact = priceEvaluation?.priceBreakdown?.specImpact || 0;
+  const conditionMultiplier = priceEvaluation?.priceBreakdown?.conditionMultiplier || 1;
+  const ageDepreciation = priceEvaluation?.priceBreakdown?.ageDepreciation || 1;
+  const issueDeductions = priceEvaluation?.priceBreakdown?.issueDeductions || 0;
+  const invoicePremium = priceEvaluation?.priceBreakdown?.invoicePremium || 0;
+  const boxPremium = priceEvaluation?.priceBreakdown?.boxPremium || 0;
+  const processingFee = priceEvaluation?.priceBreakdown?.processingFee || 0;
+  const totalAmount = priceEvaluation?.finalPrice || 0;
   
   // Generate next 7 days for pickup slots
   const generateNext7Days = () => {
@@ -63,10 +71,56 @@ export default function PriceSummaryPage() {
   const storage = searchParams.get('storage');
   const screenSize = searchParams.get('screenSize');
   const graphics = searchParams.get('graphics');
+  const touchScreen = searchParams.get('touchScreen');
+  const issues = searchParams.get('issues');
+  const hasInvoice = searchParams.get('hasInvoice');
+  const hasOriginalBox = searchParams.get('hasOriginalBox');
+  const deviceAge = searchParams.get('age');
+  const condition = searchParams.get('condition');
 
-  // No redirect needed - allow viewing price summary without login
-  // User will be prompted to login when trying to schedule pickup
-  
+  // Calculate price on component mount
+  useEffect(() => {
+    async function calculatePrice() {
+      try {
+        setLoading(true);
+
+        // For now, use dummy IDs - in production, you'd map the selection names to IDs
+        // This would require fetching the configurations first to get the IDs
+        const evaluationData = {
+          userId: user?.id || 1, // Use guest user ID if not logged in
+          superCategory: 'Windows',
+          category: 'Laptop',
+          brandId: 1, // TODO: Get from brand selection
+          brandModelId: 1, // TODO: Get from model selection
+          processorId: 1, // TODO: Map processor name to ID
+          graphicsId: graphics && graphics !== 'No graphics' ? 1 : undefined,
+          ramId: 1, // TODO: Map RAM to ID
+          storageId: 1, // TODO: Map storage to ID
+          screenSizeId: screenSize ? 1 : undefined,
+          conditionCode: condition || 'good',
+          hasInvoice: hasInvoice === 'Yes',
+          hasBox: hasOriginalBox === 'Yes',
+          ageCode: deviceAge || 'lt-1',
+          functionalIssueIds: issues ? issues.split(',').map(() => 1) : [], // TODO: Map issue codes to IDs
+          notes: 'Device evaluation from client portal',
+        };
+
+        const response = await apiService.calculateDevicePrice(evaluationData);
+        if (response.success && response.data) {
+          setPriceEvaluation(response.data);
+        } else {
+          setError(response.message || 'Failed to calculate price');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to calculate price');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    calculatePrice();
+  }, [processor, ram, storage, screenSize, graphics, touchScreen, issues, hasInvoice, hasOriginalBox, deviceAge, condition, user]);
+
   // Set default address and first date/time slot when component loads
   useEffect(() => {
     if (user?.addresses && user.addresses.length > 0 && !selectedAddress) {
@@ -94,7 +148,58 @@ export default function PriceSummaryPage() {
     setSelectedAddress(address);
     setShowAddressModal(false);
   };
-  
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className="mt-4 text-slate-400">Calculating device price...</p>
+          </div>
+        </div>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center max-w-md mx-auto p-6">
+            <div className="text-red-400 mb-4">
+              <svg className="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-lg font-semibold">Price Calculation Failed</p>
+              <p className="text-sm text-slate-400 mt-2">{error}</p>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Retry
+              </button>
+              <button
+                onClick={() => router.back()}
+                className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
+
   const placeOrder = () => {
     if (!selectedAddress) {
       alert('Please select a pickup address');

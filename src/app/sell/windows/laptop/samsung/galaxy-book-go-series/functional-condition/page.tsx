@@ -1,79 +1,66 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import WhatsAppButton from "@/components/WhatsAppButton";
+import apiService from "@/services/api";
 
-const issueOptions = [
-  {
-    id: "keyboard",
-    title: "Keyboard not working",
-    icon: "/images/image-icon/device-functional-condition/keyboard-not-working.png",
-  },
-  {
-    id: "cd-dvd",
-    title: "CD / DVD drive issues",
-    icon: "/images/image-icon/device-functional-condition/cd-drive-not-working.png",
-  },
-  {
-    id: "touchpad",
-    title: "Touchpad / click issue",
-    icon: "/images/image-icon/device-functional-condition/touchpad-issue.png",
-  },
-  {
-    id: "battery",
-    title: "Battery / backup issue",
-    icon: "/images/image-icon/device-functional-condition/battery-issue.png",
-  },
-  {
-    id: "speakers",
-    title: "Speakers not working",
-    icon: "/images/image-icon/device-functional-condition/speaker-not-working.png",
-  },
-  {
-    id: "wifi",
-    title: "Wi‑Fi / wireless issue",
-    icon: "/images/image-icon/device-functional-condition/wifi-wireless-issue.png",
-  },
-  {
-    id: "charger",
-    title: "Charger / adapter issue",
-    icon: "/images/image-icon/device-functional-condition/charger-adaptor-issue.png",
-  },
-  {
-    id: "usb",
-    title: "USB port not working",
-    icon: "/images/image-icon/device-functional-condition/usb-port-not-working.png",
-  },
-  {
-    id: "webcam",
-    title: "Webcam not working",
-    icon: "/images/image-icon/device-functional-condition/webcame-not-working.png",
-  },
-  {
-    id: "charging-port",
-    title: "Charging port issue",
-    icon: "/images/image-icon/device-functional-condition/charging-port-issue.png",
-  },
-  {
-    id: "storage",
-    title: "Hard drive / SSD issue",
-    icon: "/images/image-icon/device-functional-condition/hard-disk-not-working.png",
-  },
-  {
-    id: "motherboard",
-    title: "Motherboard / system issue",
-    icon: "/images/image-icon/device-functional-condition/motherboard-not-working.png",
-  },
-];
+// Icon mapping for issue codes
+const getIconForIssue = (issueCode: string): string => {
+  const iconMap: { [key: string]: string } = {
+    "keyboard": "/images/image-icon/device-functional-condition/keyboard-not-working.png",
+    "cd-dvd": "/images/image-icon/device-functional-condition/cd-drive-not-working.png",
+    "touchpad": "/images/image-icon/device-functional-condition/touchpad-issue.png",
+    "battery": "/images/image-icon/device-functional-condition/battery-issue.png",
+    "speakers": "/images/image-icon/device-functional-condition/speaker-not-working.png",
+    "wifi": "/images/image-icon/device-functional-condition/wifi-wireless-issue.png",
+    "charger": "/images/image-icon/device-functional-condition/charger-adaptor-issue.png",
+    "usb": "/images/image-icon/device-functional-condition/usb-port-not-working.png",
+    "webcam": "/images/image-icon/device-functional-condition/webcame-not-working.png",
+    "charging-port": "/images/image-icon/device-functional-condition/charging-port-issue.png",
+    "storage": "/images/image-icon/device-functional-condition/hard-disk-not-working.png",
+    "motherboard": "/images/image-icon/device-functional-condition/motherboard-not-working.png",
+  };
+  return iconMap[issueCode] || "/images/image-icon/device-functional-condition/keyboard-not-working.png";
+};
 
 export default function FunctionalConditionPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedIssues, setSelectedIssues] = useState<string[]>([]);
+  const [issueOptions, setIssueOptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchFunctionalIssues() {
+      try {
+        setLoading(true);
+        const response = await apiService.getFunctionalIssues();
+        if (response.success && response.data) {
+          const mappedIssues = response.data.map((issue: any) => ({
+            id: issue.issueCode,
+            title: issue.issueLabel,
+            icon: getIconForIssue(issue.issueCode),
+            priceDeduction: issue.priceDeduction,
+            severity: issue.severity,
+            apiId: issue.id,
+          }));
+          setIssueOptions(mappedIssues);
+        } else {
+          setError(response.message || 'Failed to load functional issues');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load functional issues');
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchFunctionalIssues();
+  }, []);
 
   const canContinue = true; // Always allow to continue (no issues means device works fine)
 
@@ -88,6 +75,43 @@ export default function FunctionalConditionPage() {
     const found = issueOptions.find((opt) => opt.id === id);
     return { id, label: found?.title ?? "Custom issue" };
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-500 mx-auto"></div>
+            <p className="mt-4 text-slate-400">Loading functional issues...</p>
+          </div>
+        </div>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <Header />
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+        <Footer />
+        <WhatsAppButton />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">

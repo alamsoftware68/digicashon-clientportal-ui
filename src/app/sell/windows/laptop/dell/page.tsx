@@ -1,66 +1,87 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
+import apiService from '@/services/api';
 
 export default function SellDellLaptop() {
   const router = useRouter();
+  const [models, setModels] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [brandId, setBrandId] = useState<number | null>(null);
 
-  const series = [
-    { 
-      name: 'Dell Inspiron Series', 
-      description: 'Everyday computing laptops',
-      color: 'from-cyan-500 to-cyan-700',
-      image: '/images/laptop/dell/Dell_Inspirion_Series.png',
-    },
-    { 
-      name: 'Dell Vostro Series', 
-      description: 'Small business laptops',
-      color: 'from-blue-500 to-blue-700',
-      image: '/images/laptop/dell/Dell_Vostro_Series.png',
-    },
-    { 
-      name: 'Dell Latitude Series', 
-      description: 'Business & enterprise laptops',
-      color: 'from-indigo-500 to-indigo-700',
-      image: '/images/laptop/dell/Dell_Latitude_Series.png',
-    },
-    { 
-      name: 'Dell XPS Series', 
-      description: 'Premium performance laptops',
-      color: 'from-purple-500 to-purple-700',
-      image: '/images/laptop/dell/Dell_XPS_Series.png',
-    },
-    { 
-      name: 'Dell Precision Series', 
-      description: 'Mobile workstations',
-      color: 'from-violet-500 to-violet-700',
-      image: '/images/laptop/dell/Dell_Precision_Series.png',
-    },
-    { 
-      name: 'Dell Alienware Series', 
-      description: 'Gaming laptops',
-      color: 'from-pink-500 to-rose-700',
-      image: '/images/laptop/dell/Dell_AlienWare_Series.png',
-    },
-    { 
-      name: 'Dell G Series', 
-      description: 'Budget gaming laptops',
-      color: 'from-emerald-500 to-green-700',
-      image: '/images/laptop/dell/Dell_G_Series.png',
-    },
-    { 
-      name: 'Other Series', 
-      description: 'Other Dell models',
-      color: 'from-orange-500 to-red-600',
-      image: '/images/laptop/dell/Dell_Other_Series.png',
-    },
-  ];
+  useEffect(() => {
+    async function fetchDellBrandAndModels() {
+      try {
+        setLoading(true);
+
+        // First, get Dell brand to find its ID
+        const brandsResponse = await apiService.getBrands('Laptop');
+        if (brandsResponse.success && brandsResponse.data) {
+          const dellBrand = brandsResponse.data.find((b: any) =>
+            b.name.toLowerCase() === 'dell'
+          );
+
+          if (!dellBrand) {
+            setError('Dell brand not found');
+            setLoading(false);
+            return;
+          }
+
+          setBrandId(dellBrand.id);
+
+          // Then fetch Dell laptop models
+          const modelsResponse = await apiService.getBrandModels(dellBrand.id, 'Laptop');
+          if (modelsResponse.success && modelsResponse.data) {
+            setModels(modelsResponse.data);
+          } else {
+            setError(modelsResponse.message || 'Failed to load models');
+          }
+        } else {
+          setError(brandsResponse.message || 'Failed to load brands');
+        }
+      } catch (err: any) {
+        setError(err.message || 'Failed to load Dell models');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchDellBrandAndModels();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading Dell models...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -106,41 +127,45 @@ export default function SellDellLaptop() {
             </p>
           </div>
 
-          {/* Series Selection Grid */}
+          {/* Models Selection Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
-            {series.map((item) => (
-              <Link 
-                key={item.name} 
-                href={`/sell/windows/laptop/dell/${item.name.toLowerCase().replace(/\s+/g, '-')}`}
+            {models.map((model) => (
+              <Link
+                key={model.id}
+                href={`/sell/windows/laptop/dell/${model.name.toLowerCase().replace(/\s+/g, '-')}`}
                 className="group"
               >
                 <div className="relative bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:scale-105 hover:-translate-y-1 h-full">
                   {/* Background Gradient */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-                  
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-indigo-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
                   {/* Content */}
                   <div className="relative p-6 flex flex-col h-full min-h-[180px]">
                     {/* Icon */}
                     <div className="mb-4">
-                      <div className={`w-20 h-20 mx-auto bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 overflow-hidden`}>
-                        <Image
-                          src={item.image}
-                          alt={item.name}
-                          width={64}
-                          height={64}
-                          className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-300"
-                        />
+                      <div className="w-20 h-20 mx-auto bg-white rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-2xl transition-all duration-300 overflow-hidden">
+                        {model.iconUrl ? (
+                          <Image
+                            src={model.iconUrl}
+                            alt={model.name}
+                            width={64}
+                            height={64}
+                            className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="text-4xl">💻</div>
+                        )}
                       </div>
                     </div>
-                    
-                    {/* Series Name */}
+
+                    {/* Model Name */}
                     <h3 className="text-lg font-bold text-gray-800 group-hover:text-white transition-colors duration-300 text-center mb-2">
-                      {item.name}
+                      {model.name}
                     </h3>
-                    
+
                     {/* Description */}
                     <p className="text-xs text-gray-600 group-hover:text-white/90 transition-colors duration-300 text-center mb-4 flex-grow">
-                      {item.description}
+                      {model.description || 'Dell laptop model'}
                     </p>
                     
                     {/* CTA Button */}

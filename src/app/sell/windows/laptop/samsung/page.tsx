@@ -1,132 +1,94 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import WhatsAppButton from '@/components/WhatsAppButton';
+import apiService from '@/services/api';
+
+// Default gradient colors for models
+const gradientColors = [
+  'from-sky-500 to-sky-700',
+  'from-blue-500 to-blue-700',
+  'from-indigo-500 to-indigo-700',
+  'from-purple-500 to-purple-700',
+  'from-fuchsia-500 to-fuchsia-700',
+  'from-cyan-500 to-cyan-700',
+  'from-teal-500 to-teal-700',
+  'from-emerald-500 to-emerald-700',
+  'from-sky-600 to-blue-700',
+  'from-blue-600 to-indigo-700',
+  'from-indigo-600 to-purple-700',
+  'from-purple-600 to-violet-700',
+  'from-violet-600 to-fuchsia-700',
+  'from-fuchsia-600 to-pink-700',
+  'from-rose-500 to-amber-600',
+  'from-slate-500 to-slate-700',
+];
 
 export default function SellSamsungLaptop() {
   const router = useRouter();
+  const [models, setModels] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const models = [
-    // Galaxy Book2 / Go generation
-    {
-      name: 'Galaxy Book Go Series',
-      description: 'Lightweight, value-focused Galaxy Book Go laptops',
-      color: 'from-sky-500 to-sky-700',
-    },
-    {
-      name: 'Galaxy Book2 Series',
-      description: '2nd generation Galaxy Book laptops',
-      color: 'from-blue-500 to-blue-700',
-    },
-    {
-      name: 'Galaxy Book2 360 Series',
-      description: 'Convertible 2-in-1 Galaxy Book2 360 models',
-      color: 'from-indigo-500 to-indigo-700',
-    },
-    {
-      name: 'Galaxy Book2 Pro Series',
-      description: 'Thin and light Galaxy Book2 Pro ultrabooks',
-      color: 'from-purple-500 to-purple-700',
-    },
-    {
-      name: 'Galaxy Book2 Pro 360 Series',
-      description: 'Premium 2-in-1 Galaxy Book2 Pro 360 laptops',
-      color: 'from-fuchsia-500 to-fuchsia-700',
-    },
+  useEffect(() => {
+    async function fetchSamsungModels() {
+      try {
+        setLoading(true);
+        setError(null);
 
-    // Galaxy Book3 generation
-    {
-      name: 'Galaxy Book3 Series',
-      description: 'Standard Galaxy Book3 laptops',
-      color: 'from-cyan-500 to-cyan-700',
-    },
-    {
-      name: 'Galaxy Book3 360 Series',
-      description: 'Convertible Galaxy Book3 360 models',
-      color: 'from-teal-500 to-teal-700',
-    },
-    {
-      name: 'Galaxy Book3 Ultra Series',
-      description: 'High‑performance Galaxy Book3 Ultra laptops',
-      color: 'from-emerald-500 to-emerald-700',
-    },
-    {
-      name: 'Galaxy Book3 Pro 360 Series',
-      description: 'Premium 2‑in‑1 Galaxy Book3 Pro 360 laptops',
-      color: 'from-sky-600 to-blue-700',
-    },
+        // First, get all brands for Laptop
+        const brandsRes = await apiService.getBrands('Laptop');
 
-    // Galaxy Book4 generation
-    {
-      name: 'Galaxy Book4 Series',
-      description: 'Standard Galaxy Book4 laptops',
-      color: 'from-blue-600 to-indigo-700',
-    },
-    {
-      name: 'Galaxy Book4 360 Series',
-      description: 'Convertible Galaxy Book4 360 models',
-      color: 'from-indigo-600 to-purple-700',
-    },
-    {
-      name: 'Galaxy Book4 Pro Series',
-      description: 'Thin and light Galaxy Book4 Pro ultrabooks',
-      color: 'from-purple-600 to-violet-700',
-    },
-    {
-      name: 'Galaxy Book4 Pro 360 Series',
-      description: 'Premium 2‑in‑1 Galaxy Book4 Pro 360 laptops',
-      color: 'from-violet-600 to-fuchsia-700',
-    },
-    {
-      name: 'Galaxy Book4 Ultra Series',
-      description: 'High‑end Galaxy Book4 Ultra laptops',
-      color: 'from-fuchsia-600 to-pink-700',
-    },
-    {
-      name: 'Galaxy Book4 Edge Series',
-      description: 'AI‑focused Galaxy Book4 Edge models',
-      color: 'from-rose-500 to-amber-600',
-    },
+        if (!brandsRes.success || !brandsRes.data) {
+          throw new Error('Failed to fetch brands');
+        }
 
-    // Galaxy Book5 generation
-    {
-      name: 'Galaxy Book5 Series',
-      description: 'Standard Galaxy Book5 laptops',
-      color: 'from-blue-500 to-blue-700',
-    },
-    {
-      name: 'Galaxy Book5 360 Series',
-      description: 'Convertible Galaxy Book5 360 models',
-      color: 'from-indigo-500 to-indigo-700',
-    },
-    {
-      name: 'Galaxy Book5 Pro Series',
-      description: 'Thin and light Galaxy Book5 Pro ultrabooks',
-      color: 'from-purple-500 to-purple-700',
-    },
-    {
-      name: 'Galaxy Book5 Pro 360 Series',
-      description: 'Premium 2‑in‑1 Galaxy Book5 Pro 360 laptops',
-      color: 'from-emerald-500 to-teal-700',
-    },
+        // Find Samsung brand
+        const samsungBrand = brandsRes.data.find(
+          (brand: any) => brand.name.toLowerCase() === 'samsung'
+        );
 
-    // Fallback / others
-    {
-      name: 'Others Samsung Series',
-      description: 'Other Samsung Galaxy Book and legacy models',
-      color: 'from-slate-500 to-slate-700',
-    },
-  ];
+        if (!samsungBrand) {
+          throw new Error('Samsung brand not found');
+        }
+
+        // Get models for Samsung brand
+        const modelsRes = await apiService.getBrandModels(samsungBrand.id);
+
+        if (!modelsRes.success || !modelsRes.data) {
+          throw new Error('Failed to fetch Samsung models');
+        }
+
+        // Map models with gradient colors
+        const modelsWithColors = modelsRes.data.map((model: any, index: number) => ({
+          id: model.id,
+          name: model.name,
+          description: `Samsung ${model.name}`,
+          color: gradientColors[index % gradientColors.length],
+          basePrice: model.basePrice,
+        }));
+
+        setModels(modelsWithColors);
+        setLoading(false);
+      } catch (err: any) {
+        console.error('Error fetching Samsung models:', err);
+        setError(err.message || 'Failed to load Samsung models');
+        setLoading(false);
+      }
+    }
+
+    fetchSamsungModels();
+  }, []);
 
   return (
     <div className="min-h-screen">
       <Header />
-      
+
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-indigo-50 py-16 lg:py-24 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Back Button */}
@@ -136,10 +98,10 @@ export default function SellSamsungLaptop() {
               className="group flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
             >
               <div className="w-10 h-10 rounded-full bg-white shadow-md flex items-center justify-center group-hover:shadow-lg group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-indigo-500 transition-all duration-200">
-                <svg 
-                  className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors" 
-                  fill="none" 
-                  stroke="currentColor" 
+                <svg
+                  className="w-5 h-5 text-gray-600 group-hover:text-white transition-colors"
+                  fill="none"
+                  stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -167,51 +129,78 @@ export default function SellSamsungLaptop() {
             </p>
           </div>
 
-          {/* Model Selection Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6 max-w-6xl mx-auto">
-            {models.map((model) => (
-              <Link 
-                key={model.name} 
-                href={`/sell/windows/laptop/samsung/${model.name.toLowerCase().replace(/\s+/g, '-')}`}
-                className="group"
+          {/* Loading State */}
+          {loading && (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="max-w-2xl mx-auto bg-red-50 border border-red-200 rounded-xl p-6 text-center">
+              <svg className="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-lg font-semibold text-red-800 mb-2">Failed to Load Models</h3>
+              <p className="text-red-600 mb-4">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors"
               >
-                <div className="relative bg-white/90 border border-slate-100 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1 hover:scale-[1.02] h-full">
-                  {/* Background Gradient */}
-                  <div className={`absolute inset-0 bg-gradient-to-br ${model.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-                  
-                  {/* Content */}
-                  <div className="relative p-4 md:p-5 flex flex-col h-full min-h-[140px]">
-                    {/* Icon */}
-                    <div className="mb-3 flex justify-center">
-                      <div className={`w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br ${model.color} rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white/70 group-hover:ring-offset-2 group-hover:ring-offset-white group-hover:bg-white/15 transition-all duration-300`}>
-                        <svg className="w-7 h-7 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Model Selection Grid */}
+          {!loading && !error && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6 max-w-6xl mx-auto">
+              {models.map((model) => (
+                <Link
+                  key={model.id}
+                  href={`/sell/windows/laptop/samsung/${model.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  className="group"
+                >
+                  <div className="relative bg-white/90 border border-slate-100 rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 overflow-hidden transform hover:-translate-y-1 hover:scale-[1.02] h-full">
+                    {/* Background Gradient */}
+                    <div className={`absolute inset-0 bg-gradient-to-br ${model.color} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+
+                    {/* Content */}
+                    <div className="relative p-4 md:p-5 flex flex-col h-full min-h-[140px]">
+                      {/* Icon */}
+                      <div className="mb-3 flex justify-center">
+                        <div className={`w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br ${model.color} rounded-xl flex items-center justify-center shadow-lg ring-2 ring-white/70 group-hover:ring-offset-2 group-hover:ring-offset-white group-hover:bg-white/15 transition-all duration-300`}>
+                          <svg className="w-7 h-7 text-white drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </div>
                       </div>
+
+                      {/* Model Name */}
+                      <h3 className="text-base md:text-lg font-semibold text-slate-900 group-hover:text-white transition-colors duration-300 text-center mb-1 leading-snug">
+                        {model.name}
+                      </h3>
+
+                      {/* Description */}
+                      <p className="text-xs md:text-sm text-slate-600 group-hover:text-white/90 transition-colors duration-300 text-center mb-3 flex-grow">
+                        {model.description}
+                      </p>
+
+                      {/* CTA Button */}
+                      <button className="mt-auto w-full bg-gradient-to-r from-cyan-600 to-blue-600 group-hover:from-white group-hover:to-white text-xs md:text-sm text-white group-hover:text-cyan-600 font-semibold py-2 rounded-xl shadow-md group-hover:shadow-2xl transition-all duration-300 transform group-hover:scale-105">
+                        Select Model →
+                      </button>
                     </div>
-                    
-                    {/* Model Name */}
-                    <h3 className="text-base md:text-lg font-semibold text-slate-900 group-hover:text-white transition-colors duration-300 text-center mb-1 leading-snug">
-                      {model.name}
-                    </h3>
-                    
-                    {/* Description */}
-                    <p className="text-xs md:text-sm text-slate-600 group-hover:text-white/90 transition-colors duration-300 text-center mb-3 flex-grow">
-                      {model.description}
-                    </p>
-                    
-                    {/* CTA Button */}
-                    <button className="mt-auto w-full bg-gradient-to-r from-cyan-600 to-blue-600 group-hover:from-white group-hover:to-white text-xs md:text-sm text-white group-hover:text-cyan-600 font-semibold py-2 rounded-xl shadow-md group-hover:shadow-2xl transition-all duration-300 transform group-hover:scale-105">
-                      Select Model →
-                    </button>
+
+                    {/* Decorative Elements */}
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-blue-200/20 rounded-full -mr-12 -mt-12 group-hover:bg-white/10 transition-colors duration-300"></div>
+                    <div className="absolute bottom-0 left-0 w-20 h-20 bg-purple-200/20 rounded-full -ml-10 -mb-10 group-hover:bg-white/10 transition-colors duration-300"></div>
                   </div>
-                  
-                  {/* Decorative Elements */}
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-blue-200/20 rounded-full -mr-12 -mt-12 group-hover:bg-white/10 transition-colors duration-300"></div>
-                  <div className="absolute bottom-0 left-0 w-20 h-20 bg-purple-200/20 rounded-full -ml-10 -mb-10 group-hover:bg-white/10 transition-colors duration-300"></div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              ))}
+            </div>
+          )}
           </div>
 
           {/* Info Section */}

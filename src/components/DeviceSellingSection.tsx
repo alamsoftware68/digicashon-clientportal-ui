@@ -1,13 +1,45 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import apiService from "@/services/api";
+
+interface SuperCategory {
+  id: number;
+  name: string;
+  description: string;
+  bullet1: string;
+  bullet2: string;
+  bullet3: string;
+  iconUrl: string | null;
+  enabled: boolean;
+}
 
 const DeviceSellingSection = () => {
+  const [superCategories, setSuperCategories] = useState<SuperCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSuperCategories = async () => {
+      try {
+        setLoading(true);
+        const response = await apiService.getSuperCategories();
+        if (response.success && response.data) {
+          setSuperCategories(response.data);
+        }
+      } catch (error) {
+        console.error("Error fetching super categories:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSuperCategories();
+  }, []);
   return (
     <section className="bg-white py-16 lg:py-20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Heading */}
         <div className="text-center mb-12">
           <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
@@ -55,368 +87,118 @@ const DeviceSellingSection = () => {
 
         {/* Device Categories - Sell Your Device */}
         <div className="mb-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Windows */}
-            <Link href="/sell/windows" className="group">
-              <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:scale-105 hover:-translate-y-2">
-                {/* Background Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-700 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-900"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 xl:gap-8">
+              {superCategories.map((category, index) => {
+                // Define gradient colors for each category
+                const gradients = [
+                  {
+                    bg: "from-blue-500 via-indigo-600 to-purple-700",
+                    icon: "from-blue-100 to-indigo-100",
+                    button: "from-blue-600 to-indigo-600",
+                    badge: "from-green-400 to-emerald-500",
+                    badgeText: "Popular",
+                  },
+                  {
+                    bg: "from-gray-700 via-gray-800 to-black",
+                    icon: "from-gray-100 to-gray-200",
+                    button: "from-gray-700 to-gray-900",
+                    badge: "from-gray-400 to-gray-600",
+                    badgeText: "Premium",
+                  },
+                  {
+                    bg: "from-emerald-500 via-teal-600 to-cyan-700",
+                    icon: "from-emerald-100 to-teal-100",
+                    button: "from-emerald-600 to-teal-600",
+                    badge: "from-yellow-400 to-orange-500",
+                    badgeText: "Hot Deal",
+                  },
+                  {
+                    bg: "from-pink-500 via-rose-600 to-red-700",
+                    icon: "from-pink-100 to-rose-100",
+                    button: "from-pink-600 to-rose-600",
+                    badge: "from-blue-400 to-indigo-500",
+                    badgeText: "Best Value",
+                  },
+                ];
 
-                {/* Content */}
-                <div className="relative p-6">
-                  {/* Icon Container */}
-                  <div className="relative mb-4">
-                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110 overflow-hidden">
-                      {/* Windows Logo Image */}
-                      <Image
-                        src="/images/Windows.png"
-                        alt="Windows Logo"
-                        width={56}
-                        height={56}
-                        className="object-contain"
-                      />
+                // Cycle through gradients if there are more than 4 categories
+                const gradient = gradients[index % gradients.length];
+
+                // Generate URL-friendly slug from category name (replace spaces and slashes)
+                const categorySlug = category.name.toLowerCase().replace(/[\s\/]+/g, '-');
+
+                return (
+                  <Link
+                    key={category.id}
+                    href={`/sell/${categorySlug}`}
+                    className="group"
+                  >
+                    <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:scale-105 hover:-translate-y-2 h-full min-h-[280px] flex flex-col">
+                      {/* Background Gradient */}
+                      <div className={`absolute inset-0 bg-gradient-to-br ${gradient.bg} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+
+                      {/* Content */}
+                      <div className="relative p-6 flex flex-col justify-between flex-1">
+                        {/* Icon Container */}
+                        <div className="relative mb-4">
+                          <div className={`w-24 h-24 mx-auto bg-gradient-to-br ${gradient.icon} rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110 overflow-hidden p-2`}>
+                            {/* Category Icon */}
+                            {category.iconUrl ? (
+                              <Image
+                                src={category.iconUrl}
+                                alt={`${category.name} Logo`}
+                                width={64}
+                                height={64}
+                                className="object-contain w-full h-full"
+                              />
+                            ) : (
+                              <div className="text-4xl">📱</div>
+                            )}
+                          </div>
+
+                          {/* Floating Badge */}
+                          <div className={`absolute -top-2 -right-2 bg-gradient-to-r ${gradient.badge} text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg`}>
+                            {gradient.badgeText}
+                          </div>
+                        </div>
+
+                        {/* Title */}
+                        <h3 className="text-xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-4 text-center">
+                          {category.name}
+                        </h3>
+
+                        {/* CTA Button */}
+                        <button className={`w-full bg-gradient-to-r ${gradient.button} group-hover:from-white group-hover:to-white text-white group-hover:text-gray-800 font-semibold py-3 rounded-xl shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-105 text-sm`}>
+                          Sell Now →
+                        </button>
+                      </div>
+
+                      {/* Decorative Elements */}
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-10 -mt-10 group-hover:bg-white/20 transition-colors duration-500"></div>
+                      <div className="absolute bottom-0 left-0 w-20 h-20 bg-white/10 rounded-full -ml-10 -mb-10 group-hover:bg-white/20 transition-colors duration-500"></div>
                     </div>
-
-                    {/* Floating Badge */}
-                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-green-400 to-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
-                      Popular
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-2 text-center">
-                    Windows
-                  </h3>
-
-                  {/* Features */}
-                  <ul className="space-y-1 mb-4">
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Best price for all brands
-                    </li>
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Free data wiping service
-                    </li>
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Same-day payment
-                    </li>
-                  </ul>
-
-                  {/* CTA Button */}
-                  <button className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 group-hover:from-white group-hover:to-white text-white group-hover:text-blue-600 font-semibold py-2.5 rounded-xl shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-105 text-sm">
-                    Sell Now →
-                  </button>
-                </div>
-
-                {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 w-24 h-24 bg-blue-200/20 rounded-full -mr-10 -mt-10 group-hover:bg-white/10 transition-colors duration-500"></div>
-                <div className="absolute bottom-0 left-0 w-20 h-20 bg-purple-200/20 rounded-full -ml-10 -mb-10 group-hover:bg-white/10 transition-colors duration-500"></div>
-              </div>
-            </Link>
-
-            {/* Apple */}
-            <Link href="/sell/apple" className="group">
-              <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:scale-105 hover:-translate-y-2">
-                {/* Background Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-gray-700 via-gray-800 to-black opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                {/* Content */}
-                <div className="relative p-6">
-                  {/* Icon Container */}
-                  <div className="relative mb-4">
-                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110">
-                      {/* Apple Icon */}
-                      <svg
-                        className="w-12 h-12 text-gray-800 group-hover:text-white transition-colors duration-500"
-                        fill="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                      </svg>
-                    </div>
-
-                    {/* Floating Badge */}
-                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-gray-400 to-gray-600 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
-                      Premium
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-2 text-center">
-                    Apple
-                  </h3>
-
-                  {/* Features */}
-                  <ul className="space-y-1 mb-4">
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Premium pricing for Apple
-                    </li>
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Expert Mac evaluation
-                    </li>
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Same-day payment
-                    </li>
-                  </ul>
-
-                  {/* CTA Button */}
-                  <button className="w-full bg-gradient-to-r from-gray-700 to-gray-900 group-hover:from-white group-hover:to-white text-white group-hover:text-gray-800 font-semibold py-2.5 rounded-xl shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-105 text-sm">
-                    Sell Now →
-                  </button>
-                </div>
-
-                {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 w-24 h-24 bg-gray-200/20 rounded-full -mr-10 -mt-10 group-hover:bg-white/10 transition-colors duration-500"></div>
-                <div className="absolute bottom-0 left-0 w-20 h-20 bg-gray-300/20 rounded-full -ml-10 -mb-10 group-hover:bg-white/10 transition-colors duration-500"></div>
-              </div>
-            </Link>
-
-            {/* Sell Mobile */}
-            <Link href="/sell/mobile" className="group">
-              <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:scale-105 hover:-translate-y-2">
-                {/* Background Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                {/* Content */}
-                <div className="relative p-6">
-                  {/* Icon Container */}
-                  <div className="relative mb-4">
-                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-emerald-100 to-teal-100 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110 overflow-hidden p-1">
-                      {/* Mobile Logo Image */}
-                      <Image
-                        src="/images/Sell Mobile.png"
-                        alt="Mobile Logo"
-                        width={110}
-                        height={110}
-                        className="object-contain w-full h-full"
-                      />
-                    </div>
-
-                    {/* Floating Badge */}
-                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
-                      Hot Deal
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-2 text-center">
-                    Sell MOBILE
-                  </h3>
-
-                  {/* Features */}
-                  <ul className="space-y-1 mb-4">
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Top market value
-                    </li>
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Quick inspection process
-                    </li>
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Instant cash payment
-                    </li>
-                  </ul>
-
-                  {/* CTA Button */}
-                  <button className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 group-hover:from-white group-hover:to-white text-white group-hover:text-emerald-600 font-semibold py-2.5 rounded-xl shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-105 text-sm">
-                    Sell Now →
-                  </button>
-                </div>
-
-                {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-200/20 rounded-full -mr-10 -mt-10 group-hover:bg-white/10 transition-colors duration-500"></div>
-                <div className="absolute bottom-0 left-0 w-20 h-20 bg-teal-200/20 rounded-full -ml-10 -mb-10 group-hover:bg-white/10 transition-colors duration-500"></div>
-              </div>
-            </Link>
-
-            {/* Sell Tablet/iPad */}
-            <Link href="/sell/tablet" className="group">
-              <div className="relative bg-white rounded-3xl shadow-xl hover:shadow-2xl transition-all duration-500 overflow-hidden transform hover:scale-105 hover:-translate-y-2">
-                {/* Background Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-500 via-rose-600 to-red-700 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
-                {/* Content */}
-                <div className="relative p-6">
-                  {/* Icon Container */}
-                  <div className="relative mb-4">
-                    <div className="w-20 h-20 mx-auto bg-gradient-to-br from-pink-100 to-rose-100 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-all duration-500 shadow-lg group-hover:shadow-2xl group-hover:scale-110 overflow-hidden p-1">
-                      {/* Tablet Logo Image */}
-                      <Image
-                        src="/images/Tablet iPAD.png"
-                        alt="Tablet iPad Logo"
-                        width={110}
-                        height={110}
-                        className="object-contain w-full h-full"
-                      />
-                    </div>
-
-                    {/* Floating Badge */}
-                    <div className="absolute -top-2 -right-2 bg-gradient-to-r from-blue-400 to-indigo-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow-lg">
-                      Best Value
-                    </div>
-                  </div>
-
-                  {/* Title */}
-                  <h3 className="text-xl font-bold text-gray-800 group-hover:text-white transition-colors duration-500 mb-2 text-center">
-                    Sell TABLET/iPAD
-                  </h3>
-
-                  {/* Features */}
-                  <ul className="space-y-1 mb-4">
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Competitive pricing
-                    </li>
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      All brands accepted
-                    </li>
-                    <li className="flex items-center text-xs text-gray-700 group-hover:text-white/90 transition-colors duration-500">
-                      <svg
-                        className="w-4 h-4 mr-1 text-green-500 group-hover:text-green-300"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Fast & secure process
-                    </li>
-                  </ul>
-
-                  {/* CTA Button */}
-                  <button className="w-full bg-gradient-to-r from-pink-600 to-rose-600 group-hover:from-white group-hover:to-white text-white group-hover:text-pink-600 font-semibold py-2.5 rounded-xl shadow-lg group-hover:shadow-2xl transition-all duration-500 transform group-hover:scale-105 text-sm">
-                    Sell Now →
-                  </button>
-                </div>
-
-                {/* Decorative Elements */}
-                <div className="absolute top-0 right-0 w-24 h-24 bg-pink-200/20 rounded-full -mr-10 -mt-10 group-hover:bg-white/10 transition-colors duration-500"></div>
-                <div className="absolute bottom-0 left-0 w-20 h-20 bg-rose-200/20 rounded-full -ml-10 -mb-10 group-hover:bg-white/10 transition-colors duration-500"></div>
-              </div>
-            </Link>
-          </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
+
+        {/* Backup: If no categories, show a message */}
+        {!loading && superCategories.length === 0 && (
+          <div className="mb-12">
+            <div className="text-center py-10 text-gray-500">
+              No categories available at the moment. Please check back later.
+            </div>
+          </div>
+        )}
+
+        {/* Old hardcoded cards have been replaced with dynamic super categories above */}
 
         {/* App Store Ratings */}
         <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">

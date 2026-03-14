@@ -1318,6 +1318,39 @@ class ApiService {
   // ========================================
 
   /**
+   * Get all enabled super categories
+   */
+  async getSuperCategories() {
+    try {
+      console.log('[API] Fetching super categories');
+      const response = await fetch(`${this.baseUrl}/devices/config/super-categories`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return this.handleResponse<{
+        id: number;
+        name: string;
+        description: string;
+        bullet1: string;
+        bullet2: string;
+        bullet3: string;
+        iconUrl: string | null;
+        enabled: boolean;
+      }[]>(response);
+    } catch (error: any) {
+      console.error('[API] Get super categories error:', error);
+      return {
+        success: false,
+        message: error.message || 'Failed to fetch super categories',
+        data: undefined
+      };
+    }
+  }
+
+  /**
    * Get all enabled brands
    * Optionally filter by type (e.g., "Laptop", "Mobile")
    */

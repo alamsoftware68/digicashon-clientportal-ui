@@ -9,7 +9,6 @@ import apiService from "@/services/api";
 interface Brand {
   id: number;
   name: string;
-  description: string;
   iconUrl: string | null;
   enabled: boolean;
   brandType: string;
@@ -79,7 +78,7 @@ const BrandListPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
+    <div className="bg-gradient-to-br from-gray-50 to-gray-100 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <button

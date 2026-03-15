@@ -1406,6 +1406,8 @@ class ApiService {
         name: string;
         description: string;
         brandId: number;
+        brandType: string;
+        basePrice: number;
         iconUrl: string | null;
         enabled: boolean;
       }[]>(response);

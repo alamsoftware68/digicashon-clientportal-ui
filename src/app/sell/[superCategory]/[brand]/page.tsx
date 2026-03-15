@@ -10,16 +10,16 @@ interface BrandModel {
   id: number;
   name: string;
   description: string;
-  modelNumber: string;
+  brandId: number;
+  brandType: string;
+  basePrice: number;
   iconUrl: string | null;
   enabled: boolean;
-  brandId: number;
 }
 
 interface Brand {
   id: number;
   name: string;
-  description: string;
   iconUrl: string | null;
   enabled: boolean;
   brandType: string;
@@ -105,7 +105,7 @@ const BrandModelListPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
+    <div className="bg-gradient-to-br from-gray-50 to-gray-100 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
         <button
@@ -239,9 +239,9 @@ const BrandModelListPage = () => {
                         <h3 className="text-lg font-bold text-gray-800 group-hover:text-white transition-colors duration-500 text-center mb-2">
                           {model.name}
                         </h3>
-                        {model.modelNumber && (
+                        {model.description && (
                           <p className="text-xs text-gray-500 group-hover:text-white/80 transition-colors duration-500 text-center">
-                            Model: {model.modelNumber}
+                            {model.description}
                           </p>
                         )}
                       </div>

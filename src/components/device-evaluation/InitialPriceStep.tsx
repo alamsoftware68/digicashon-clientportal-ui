@@ -27,9 +27,9 @@ const InitialPriceStep: React.FC<InitialPriceStepProps> = ({
     <div className="max-w-5xl mx-auto">
       {/* Breadcrumb */}
       <div className="mb-8 flex items-center">
-        <div className="inline-flex items-center px-4 py-2 rounded-full bg-cyan-500/20 border border-cyan-500/50">
-          <div className="w-2 h-2 rounded-full bg-cyan-400 mr-3 animate-pulse"></div>
-          <span className="text-cyan-300 text-sm font-medium uppercase tracking-wide">
+        <div className="inline-flex items-center px-4 py-2 rounded-full bg-cyan-50 border border-cyan-200">
+          <div className="w-2 h-2 rounded-full bg-cyan-500 mr-3 animate-pulse"></div>
+          <span className="text-cyan-700 text-sm font-medium uppercase tracking-wide">
             {brand.name} • {model.name}
           </span>
         </div>
@@ -38,14 +38,14 @@ const InitialPriceStep: React.FC<InitialPriceStepProps> = ({
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Left Side - Device Display */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-8 border border-gray-700">
-          <h2 className="text-white text-2xl font-bold mb-6">Sell your</h2>
-          <h1 className="text-cyan-400 text-4xl font-extrabold mb-8">
+        <div className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm">
+          <h2 className="text-gray-900 text-2xl font-bold mb-6">Sell your</h2>
+          <h1 className="text-cyan-600 text-4xl font-extrabold mb-8">
             {model.name}
           </h1>
 
           {/* Device Image Card */}
-          <div className="bg-gradient-to-br from-gray-900 to-black rounded-2xl p-8 border border-gray-700 mb-6">
+          <div className="bg-gray-50 rounded-2xl p-8 border border-gray-100 mb-6">
             <div className="flex items-center justify-center mb-4">
               {brand.iconUrl ? (
                 <Image
@@ -56,7 +56,7 @@ const InitialPriceStep: React.FC<InitialPriceStepProps> = ({
                   className="object-contain"
                 />
               ) : (
-                <div className="text-8xl text-blue-400">
+                <div className="text-8xl text-blue-500">
                   {brand.name.substring(0, 1)}
                 </div>
               )}
@@ -65,14 +65,14 @@ const InitialPriceStep: React.FC<InitialPriceStepProps> = ({
 
           {/* Starting Price */}
           <div className="mb-6">
-            <p className="text-gray-400 text-sm uppercase tracking-wide mb-2">
+            <p className="text-gray-500 text-sm uppercase tracking-wide mb-2">
               GET PRICE UPTO
             </p>
             <div className="flex items-baseline">
-              <span className="text-cyan-400 text-5xl font-bold">
+              <span className="text-cyan-600 text-5xl font-bold">
                 {model.basePrice.toLocaleString("en-IN")}
               </span>
-              <span className="text-gray-400 text-xl ml-2">
+              <span className="text-gray-500 text-xl ml-2">
                 Estimated Price
               </span>
             </div>
@@ -80,20 +80,20 @@ const InitialPriceStep: React.FC<InitialPriceStepProps> = ({
         </div>
 
         {/* Right Side - Get Exact Value */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-8 shadow-2xl">
-          <h3 className="text-white text-2xl font-bold mb-4">
+        <div className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm">
+          <h3 className="text-gray-900 text-2xl font-bold mb-4">
             Get Exact Value
           </h3>
 
           <div className="mb-6">
             <div className="flex items-baseline mb-2">
-              <p className="text-gray-400 text-sm mr-2">Base estimate</p>
+              <p className="text-gray-500 text-sm mr-2">Base estimate</p>
               <p className="text-gray-400 text-xs">
                 For a device in good condition
               </p>
             </div>
             <div className="flex items-baseline justify-between">
-              <span className="text-white text-3xl font-bold">
+              <span className="text-gray-900 text-3xl font-bold">
                 ₹{model.basePrice.toLocaleString("en-IN")}
               </span>
               <span className="text-green-600 text-sm font-medium">
@@ -138,7 +138,7 @@ const InitialPriceStep: React.FC<InitialPriceStepProps> = ({
                   />
                 </svg>
               </div>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-600 text-sm">
                 No obligation to sell – you're free to walk away.
               </p>
             </div>
@@ -157,7 +157,7 @@ const InitialPriceStep: React.FC<InitialPriceStepProps> = ({
                   />
                 </svg>
               </div>
-              <p className="text-gray-400 text-sm">
+              <p className="text-gray-600 text-sm">
                 Secure process with verified partners and safe data wiping.
               </p>
             </div>

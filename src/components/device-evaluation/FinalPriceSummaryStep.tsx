@@ -114,11 +114,10 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
         setLoading(true);
         setError("");
 
-        // Prepare request data
         const requestData = {
-          userId: 1, // TODO: Get from auth context
+          userId: 1,
           superCategory: evaluationData.superCategory,
-          category: evaluationData.superCategory, // For now, same as superCategory
+          category: evaluationData.superCategory,
           brandId: evaluationData.brandId,
           brandModelId: evaluationData.brandModelId,
           processorId: evaluationData.processorId!,
@@ -134,20 +133,14 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
           notes: `Customer mobile: ${evaluationData.mobileNumber}`,
         };
 
-        console.log("Sending price calculation request:", requestData);
-
-        // Call price calculation API
         const response = await apiService.calculateDevicePrice(requestData);
 
         if (response.success && response.data) {
-          console.log("Price calculation response:", response.data);
           setPriceData(response.data);
         } else {
-          console.error("Price calculation failed:", response);
           setError(response.message || "Failed to calculate price");
         }
       } catch (err: any) {
-        console.error("Error calculating price:", err);
         setError("An error occurred while calculating the price");
       } finally {
         setLoading(false);
@@ -164,7 +157,6 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
     }
 
     setPlacingOrder(true);
-    // TODO: Implement order placement API call
     setTimeout(() => {
       alert("Order placed successfully! We will contact you soon.");
       setPlacingOrder(false);
@@ -174,8 +166,8 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
   if (loading) {
     return (
       <div className="flex flex-col justify-center items-center py-20">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-cyan-400 mb-4"></div>
-        <p className="text-white text-lg">Calculating your device price...</p>
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-cyan-500 mb-4"></div>
+        <p className="text-gray-700 text-lg">Calculating your device price...</p>
       </div>
     );
   }
@@ -184,8 +176,8 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
     return (
       <div className="flex flex-col justify-center items-center py-20">
         <div className="text-red-400 text-6xl mb-4">⚠️</div>
-        <h3 className="text-white text-2xl font-bold mb-2">Error Calculating Price</h3>
-        <p className="text-gray-400 mb-6">{error || "Unable to calculate price"}</p>
+        <h3 className="text-gray-900 text-2xl font-bold mb-2">Error Calculating Price</h3>
+        <p className="text-gray-500 mb-6">{error || "Unable to calculate price"}</p>
         <button
           onClick={() => window.location.reload()}
           className="bg-cyan-500 hover:bg-cyan-600 text-white px-6 py-3 rounded-lg transition-colors"
@@ -198,10 +190,10 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      {/* Main Content - Left Side (2 columns on large screens) */}
+      {/* Main Content */}
       <div className="lg:col-span-2 space-y-6">
-        {/* Final Price Card */}
-        <div className="bg-gradient-to-br from-cyan-500 via-blue-600 to-purple-700 rounded-3xl p-8 shadow-2xl border border-cyan-400">
+        {/* Final Price Card - keep gradient for highlight */}
+        <div className="bg-gradient-to-br from-cyan-500 via-blue-600 to-purple-700 rounded-3xl p-8 shadow-lg border border-cyan-400">
           <div className="text-center">
             <p className="text-white/80 text-sm font-semibold uppercase tracking-wide mb-2">
               Estimated Selling Price
@@ -216,41 +208,41 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
         </div>
 
         {/* Device Configuration Summary */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-8 shadow-2xl border border-gray-700">
-          <h3 className="text-white font-bold text-2xl mb-6">Device Configuration</h3>
+        <div className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm">
+          <h3 className="text-gray-900 font-bold text-2xl mb-6">Device Configuration</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gray-700/30 rounded-xl p-4">
-              <p className="text-gray-400 text-sm mb-1">Brand & Model</p>
-              <p className="text-white font-semibold">{priceData.brandName} {priceData.brandModelName}</p>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <p className="text-gray-500 text-sm mb-1">Brand & Model</p>
+              <p className="text-gray-900 font-semibold">{priceData.brandName} {priceData.brandModelName}</p>
             </div>
 
-            <div className="bg-gray-700/30 rounded-xl p-4">
-              <p className="text-gray-400 text-sm mb-1">Processor</p>
-              <p className="text-white font-semibold">{priceData.processorName}</p>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <p className="text-gray-500 text-sm mb-1">Processor</p>
+              <p className="text-gray-900 font-semibold">{priceData.processorName}</p>
             </div>
 
             {priceData.graphicsName && (
-              <div className="bg-gray-700/30 rounded-xl p-4">
-                <p className="text-gray-400 text-sm mb-1">Graphics Card</p>
-                <p className="text-white font-semibold">{priceData.graphicsName}</p>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p className="text-gray-500 text-sm mb-1">Graphics Card</p>
+                <p className="text-gray-900 font-semibold">{priceData.graphicsName}</p>
               </div>
             )}
 
-            <div className="bg-gray-700/30 rounded-xl p-4">
-              <p className="text-gray-400 text-sm mb-1">RAM</p>
-              <p className="text-white font-semibold">{priceData.ramLabel}</p>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <p className="text-gray-500 text-sm mb-1">RAM</p>
+              <p className="text-gray-900 font-semibold">{priceData.ramLabel}</p>
             </div>
 
-            <div className="bg-gray-700/30 rounded-xl p-4">
-              <p className="text-gray-400 text-sm mb-1">Storage</p>
-              <p className="text-white font-semibold">{priceData.storageLabel}</p>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <p className="text-gray-500 text-sm mb-1">Storage</p>
+              <p className="text-gray-900 font-semibold">{priceData.storageLabel}</p>
             </div>
 
             {priceData.screenSizeLabel && (
-              <div className="bg-gray-700/30 rounded-xl p-4">
-                <p className="text-gray-400 text-sm mb-1">Screen Size</p>
-                <p className="text-white font-semibold">{priceData.screenSizeLabel}</p>
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p className="text-gray-500 text-sm mb-1">Screen Size</p>
+                <p className="text-gray-900 font-semibold">{priceData.screenSizeLabel}</p>
               </div>
             )}
           </div>
@@ -258,12 +250,12 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
           {/* Functional Issues */}
           {priceData.functionalIssues && priceData.functionalIssues.length > 0 && (
             <div className="mt-6">
-              <h4 className="text-white font-semibold mb-3">Functional Issues</h4>
+              <h4 className="text-gray-900 font-semibold mb-3">Functional Issues</h4>
               <div className="space-y-2">
                 {priceData.functionalIssues.map((issue) => (
-                  <div key={issue.issueId} className="bg-red-500/10 border border-red-500/30 rounded-xl p-3 flex justify-between items-center">
-                    <span className="text-red-300 text-sm">{issue.issueLabel}</span>
-                    <span className="text-red-400 text-sm font-semibold">-₹{issue.priceDeduction}</span>
+                  <div key={issue.issueId} className="bg-red-50 border border-red-200 rounded-xl p-3 flex justify-between items-center">
+                    <span className="text-red-700 text-sm">{issue.issueLabel}</span>
+                    <span className="text-red-600 text-sm font-semibold">-₹{issue.priceDeduction}</span>
                   </div>
                 ))}
               </div>
@@ -272,15 +264,15 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
 
           {/* Accessories */}
           <div className="mt-6">
-            <h4 className="text-white font-semibold mb-3">Accessories</h4>
+            <h4 className="text-gray-900 font-semibold mb-3">Accessories</h4>
             <div className="flex space-x-4">
-              <div className={`flex-1 ${priceData.hasInvoice ? 'bg-green-500/10 border-green-500/30' : 'bg-gray-700/30 border-gray-600'} border rounded-xl p-3 text-center`}>
-                <p className={`text-sm ${priceData.hasInvoice ? 'text-green-300' : 'text-gray-400'}`}>
+              <div className={`flex-1 ${priceData.hasInvoice ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'} border rounded-xl p-3 text-center`}>
+                <p className={`text-sm ${priceData.hasInvoice ? 'text-green-700' : 'text-gray-500'}`}>
                   Invoice: {priceData.hasInvoice ? '✓ Yes' : '✗ No'}
                 </p>
               </div>
-              <div className={`flex-1 ${priceData.hasBox ? 'bg-green-500/10 border-green-500/30' : 'bg-gray-700/30 border-gray-600'} border rounded-xl p-3 text-center`}>
-                <p className={`text-sm ${priceData.hasBox ? 'text-green-300' : 'text-gray-400'}`}>
+              <div className={`flex-1 ${priceData.hasBox ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'} border rounded-xl p-3 text-center`}>
+                <p className={`text-sm ${priceData.hasBox ? 'text-green-700' : 'text-gray-500'}`}>
                   Box: {priceData.hasBox ? '✓ Yes' : '✗ No'}
                 </p>
               </div>
@@ -289,154 +281,154 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
         </div>
 
         {/* Price Breakdown */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-8 shadow-2xl border border-gray-700">
-          <h3 className="text-white font-bold text-2xl mb-6">Price Breakdown</h3>
+        <div className="bg-white rounded-3xl p-8 border border-gray-200 shadow-sm">
+          <h3 className="text-gray-900 font-bold text-2xl mb-6">Price Breakdown</h3>
 
           <div className="space-y-3">
             {priceData.priceBreakdown.specImpact !== 0 && (
-              <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                <span className="text-gray-300">Specification Impact</span>
-                <span className={`font-semibold ${priceData.priceBreakdown.specImpact > 0 ? 'text-green-400' : 'text-red-400'}`}>
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-600">Specification Impact</span>
+                <span className={`font-semibold ${priceData.priceBreakdown.specImpact > 0 ? 'text-green-600' : 'text-red-500'}`}>
                   {priceData.priceBreakdown.specImpact > 0 ? '+' : ''}₹{priceData.priceBreakdown.specImpact.toLocaleString()}
                 </span>
               </div>
             )}
 
             {priceData.priceBreakdown.conditionMultiplier !== 1 && (
-              <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                <span className="text-gray-300">Condition Adjustment ({(priceData.priceBreakdown.conditionMultiplier * 100).toFixed(0)}%)</span>
-                <span className="text-orange-400 font-semibold">Applied</span>
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-600">Condition Adjustment ({(priceData.priceBreakdown.conditionMultiplier * 100).toFixed(0)}%)</span>
+                <span className="text-orange-600 font-semibold">Applied</span>
               </div>
             )}
 
             {priceData.priceBreakdown.ageDepreciation !== 0 && priceData.priceBreakdown.ageDepreciation !== 1 && (
-              <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                <span className="text-gray-300">Age Depreciation ({(priceData.priceBreakdown.ageDepreciation * 100).toFixed(0)}%)</span>
-                <span className="text-orange-400 font-semibold">Applied</span>
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-600">Age Depreciation ({(priceData.priceBreakdown.ageDepreciation * 100).toFixed(0)}%)</span>
+                <span className="text-orange-600 font-semibold">Applied</span>
               </div>
             )}
 
             {priceData.priceBreakdown.issueDeductions !== 0 && (
-              <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                <span className="text-gray-300">Issue Deductions</span>
-                <span className="text-red-400 font-semibold">-₹{Math.abs(priceData.priceBreakdown.issueDeductions).toLocaleString()}</span>
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-600">Issue Deductions</span>
+                <span className="text-red-500 font-semibold">-₹{Math.abs(priceData.priceBreakdown.issueDeductions).toLocaleString()}</span>
               </div>
             )}
 
             {priceData.priceBreakdown.invoicePremium !== 0 && (
-              <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                <span className="text-gray-300">Invoice Premium</span>
-                <span className="text-green-400 font-semibold">+₹{priceData.priceBreakdown.invoicePremium.toLocaleString()}</span>
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-600">Invoice Premium</span>
+                <span className="text-green-600 font-semibold">+₹{priceData.priceBreakdown.invoicePremium.toLocaleString()}</span>
               </div>
             )}
 
             {priceData.priceBreakdown.boxPremium !== 0 && (
-              <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                <span className="text-gray-300">Box Premium</span>
-                <span className="text-green-400 font-semibold">+₹{priceData.priceBreakdown.boxPremium.toLocaleString()}</span>
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-600">Box Premium</span>
+                <span className="text-green-600 font-semibold">+₹{priceData.priceBreakdown.boxPremium.toLocaleString()}</span>
               </div>
             )}
 
             {priceData.priceBreakdown.processingFee !== 0 && (
-              <div className="flex justify-between items-center pb-3 border-b border-gray-700">
-                <span className="text-gray-300">Processing Fee</span>
-                <span className="text-red-400 font-semibold">-₹{Math.abs(priceData.priceBreakdown.processingFee).toLocaleString()}</span>
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-600">Processing Fee</span>
+                <span className="text-red-500 font-semibold">-₹{Math.abs(priceData.priceBreakdown.processingFee).toLocaleString()}</span>
               </div>
             )}
 
             <div className="flex justify-between items-center pt-3">
-              <span className="text-white font-bold text-lg">Final Price</span>
-              <span className="text-cyan-400 font-bold text-2xl">₹{priceData.finalPrice.toLocaleString()}</span>
+              <span className="text-gray-900 font-bold text-lg">Final Price</span>
+              <span className="text-cyan-600 font-bold text-2xl">₹{priceData.finalPrice.toLocaleString()}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Right Sidebar - Address & Pickup */}
+      {/* Right Sidebar */}
       <div className="lg:col-span-1 space-y-6">
         {/* Contact Info */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-6 shadow-2xl border border-gray-700">
-          <h4 className="text-white font-semibold text-lg mb-4">Contact Information</h4>
-          <div className="bg-cyan-500/10 border border-cyan-500/30 rounded-xl p-4">
-            <p className="text-gray-400 text-sm mb-1">Mobile Number</p>
-            <p className="text-white font-semibold">+91 {evaluationData.mobileNumber}</p>
+        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+          <h4 className="text-gray-900 font-semibold text-lg mb-4">Contact Information</h4>
+          <div className="bg-cyan-50 border border-cyan-200 rounded-xl p-4">
+            <p className="text-gray-500 text-sm mb-1">Mobile Number</p>
+            <p className="text-gray-900 font-semibold">+91 {evaluationData.mobileNumber}</p>
           </div>
         </div>
 
         {/* Address Selection */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-6 shadow-2xl border border-gray-700">
-          <h4 className="text-white font-semibold text-lg mb-4">📍 Pickup Address</h4>
+        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+          <h4 className="text-gray-900 font-semibold text-lg mb-4">📍 Pickup Address</h4>
 
           <div className="space-y-3">
             <button
               onClick={() => setSelectedAddress("home")}
               className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                 selectedAddress === "home"
-                  ? "border-cyan-400 bg-cyan-400/10"
-                  : "border-gray-600 bg-gray-700/30 hover:border-gray-500"
+                  ? "border-cyan-400 bg-cyan-50"
+                  : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
-              <p className="text-white font-medium">Home Address</p>
-              <p className="text-gray-400 text-sm mt-1">123 Main Street, City</p>
+              <p className="text-gray-900 font-medium">Home Address</p>
+              <p className="text-gray-500 text-sm mt-1">123 Main Street, City</p>
             </button>
 
             <button
               onClick={() => setSelectedAddress("office")}
               className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                 selectedAddress === "office"
-                  ? "border-cyan-400 bg-cyan-400/10"
-                  : "border-gray-600 bg-gray-700/30 hover:border-gray-500"
+                  ? "border-cyan-400 bg-cyan-50"
+                  : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
-              <p className="text-white font-medium">Office Address</p>
-              <p className="text-gray-400 text-sm mt-1">456 Business Park, City</p>
+              <p className="text-gray-900 font-medium">Office Address</p>
+              <p className="text-gray-500 text-sm mt-1">456 Business Park, City</p>
             </button>
 
-            <button className="w-full p-4 rounded-xl border-2 border-dashed border-gray-600 hover:border-cyan-400 transition-colors text-cyan-400 text-center">
+            <button className="w-full p-4 rounded-xl border-2 border-dashed border-gray-300 hover:border-cyan-400 transition-colors text-cyan-600 text-center">
               + Add New Address
             </button>
           </div>
         </div>
 
         {/* Pickup Slot */}
-        <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-6 shadow-2xl border border-gray-700">
-          <h4 className="text-white font-semibold text-lg mb-4">📅 Pickup Slot</h4>
+        <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm">
+          <h4 className="text-gray-900 font-semibold text-lg mb-4">📅 Pickup Slot</h4>
 
           <div className="space-y-3">
             <button
               onClick={() => setSelectedSlot("tomorrow-morning")}
               className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                 selectedSlot === "tomorrow-morning"
-                  ? "border-cyan-400 bg-cyan-400/10"
-                  : "border-gray-600 bg-gray-700/30 hover:border-gray-500"
+                  ? "border-cyan-400 bg-cyan-50"
+                  : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
-              <p className="text-white font-medium">Tomorrow Morning</p>
-              <p className="text-gray-400 text-sm mt-1">9:00 AM - 12:00 PM</p>
+              <p className="text-gray-900 font-medium">Tomorrow Morning</p>
+              <p className="text-gray-500 text-sm mt-1">9:00 AM - 12:00 PM</p>
             </button>
 
             <button
               onClick={() => setSelectedSlot("tomorrow-afternoon")}
               className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                 selectedSlot === "tomorrow-afternoon"
-                  ? "border-cyan-400 bg-cyan-400/10"
-                  : "border-gray-600 bg-gray-700/30 hover:border-gray-500"
+                  ? "border-cyan-400 bg-cyan-50"
+                  : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
-              <p className="text-white font-medium">Tomorrow Afternoon</p>
-              <p className="text-gray-400 text-sm mt-1">2:00 PM - 5:00 PM</p>
+              <p className="text-gray-900 font-medium">Tomorrow Afternoon</p>
+              <p className="text-gray-500 text-sm mt-1">2:00 PM - 5:00 PM</p>
             </button>
 
             <button
               onClick={() => setSelectedSlot("weekend")}
               className={`w-full text-left p-4 rounded-xl border-2 transition-all ${
                 selectedSlot === "weekend"
-                  ? "border-cyan-400 bg-cyan-400/10"
-                  : "border-gray-600 bg-gray-700/30 hover:border-gray-500"
+                  ? "border-cyan-400 bg-cyan-50"
+                  : "border-gray-200 bg-white hover:border-gray-300"
               }`}
             >
-              <p className="text-white font-medium">This Weekend</p>
-              <p className="text-gray-400 text-sm mt-1">Saturday/Sunday</p>
+              <p className="text-gray-900 font-medium">This Weekend</p>
+              <p className="text-gray-500 text-sm mt-1">Saturday/Sunday</p>
             </button>
           </div>
         </div>
@@ -448,7 +440,7 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
           className={`w-full font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 transform flex items-center justify-center ${
             selectedAddress && selectedSlot && !placingOrder
               ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 hover:shadow-xl hover:scale-105 text-white"
-              : "bg-gray-700 text-gray-500 cursor-not-allowed"
+              : "bg-gray-100 text-gray-400 cursor-not-allowed"
           }`}
         >
           {placingOrder ? (
@@ -467,7 +459,7 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
         </button>
 
         {(!selectedAddress || !selectedSlot) && (
-          <p className="text-center text-gray-400 text-sm">
+          <p className="text-center text-gray-500 text-sm">
             Please select address and pickup slot to continue
           </p>
         )}

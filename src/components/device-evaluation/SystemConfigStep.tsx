@@ -64,27 +64,19 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
   }, []);
 
   const handleContinue = () => {
-    // Only processor, RAM, and storage are required
-    // Graphics and screen size are optional
-    if (
-      selections.processorId &&
-      selections.ramId &&
-      selections.storageId
-    ) {
+    if (selections.processorId && selections.ramId && selections.storageId) {
       onUpdate(selections);
       onContinue();
     }
   };
 
   const isFormValid =
-    selections.processorId &&
-    selections.ramId &&
-    selections.storageId;
+    selections.processorId && selections.ramId && selections.storageId;
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
       </div>
     );
   }
@@ -94,35 +86,35 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Side - Configuration Form */}
         <div className="lg:col-span-2">
-          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-10 border border-gray-700">
+          <div className="bg-white rounded-3xl p-10 border border-gray-200 shadow-sm">
             {/* Step Header */}
             <div className="mb-8">
-              <p className="text-gray-400 text-sm uppercase tracking-wider mb-2 flex items-center">
-                <span className="inline-block w-8 h-8 rounded-full bg-cyan-500 text-white text-xs font-bold flex items-center justify-center mr-3">
+              <p className="text-gray-500 text-sm uppercase tracking-wider mb-2 flex items-center">
+                <span className="w-8 h-8 rounded-full bg-cyan-500 text-white text-xs font-bold flex items-center justify-center mr-3">
                   2
                 </span>
                 STEP 2 • SYSTEM CONFIGURATION
               </p>
-              <div className="w-full bg-gray-700 h-1 rounded-full overflow-hidden mb-4">
+              <div className="w-full bg-gray-200 h-1 rounded-full overflow-hidden mb-4">
                 <div className="w-1/4 h-full bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full"></div>
               </div>
               <div className="flex items-center justify-between">
-                <h1 className="text-white text-3xl font-bold">System</h1>
-                <div className="bg-gray-800 px-3 py-1 rounded-lg">
-                  <p className="text-cyan-400 text-xs">
+                <h1 className="text-gray-900 text-3xl font-bold">System</h1>
+                <div className="bg-gray-50 border border-gray-200 px-3 py-1 rounded-lg">
+                  <p className="text-cyan-600 text-xs">
                     • Honest answers help us show the best value.
                   </p>
                 </div>
               </div>
-              <h1 className="text-white text-3xl font-bold mb-2">Configuration</h1>
-              <h1 className="text-cyan-400 text-3xl font-bold">Details</h1>
+              <h1 className="text-gray-900 text-3xl font-bold mb-2">Configuration</h1>
+              <h1 className="text-cyan-600 text-3xl font-bold">Details</h1>
             </div>
 
             {/* Processor Selection */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-white font-semibold">Processor</label>
-                <span className="text-gray-400 text-xs bg-gray-800 px-2 py-1 rounded">
+                <label className="text-gray-900 font-semibold">Processor</label>
+                <span className="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">
                   CPU
                 </span>
               </div>
@@ -134,7 +126,7 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                     processorId: e.target.value ? Number(e.target.value) : null,
                   }))
                 }
-                className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-500 transition-colors"
+                className="w-full bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-500 transition-colors"
               >
                 <option value="">Select processor...</option>
                 {processors.map((proc) => (
@@ -148,8 +140,8 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
             {/* Graphics Card Selection */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-white font-semibold">Graphics Card</label>
-                <span className="text-gray-400 text-xs bg-gray-800 px-2 py-1 rounded">
+                <label className="text-gray-900 font-semibold">Graphics Card</label>
+                <span className="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">
                   GPU
                 </span>
               </div>
@@ -161,7 +153,7 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                     graphicsId: e.target.value ? Number(e.target.value) : null,
                   }))
                 }
-                className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-500 transition-colors"
+                className="w-full bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-500 transition-colors"
               >
                 <option value="">Select graphics card...</option>
                 {graphics.map((graph) => (
@@ -172,12 +164,12 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
               </select>
             </div>
 
-            {/* Screen Size Selection - Only show if options available */}
+            {/* Screen Size Selection */}
             {screenSizes.length > 0 && (
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-3">
-                  <label className="text-white font-semibold">Screen Size</label>
-                  <span className="text-gray-400 text-xs bg-gray-800 px-2 py-1 rounded">
+                  <label className="text-gray-900 font-semibold">Screen Size</label>
+                  <span className="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">
                     Display
                   </span>
                 </div>
@@ -190,8 +182,8 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                       }
                       className={`p-3 rounded-xl border-2 transition-all ${
                         selections.screenSizeId === screen.id
-                          ? "border-cyan-500 bg-cyan-500/20 text-white"
-                          : "border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600"
+                          ? "border-cyan-500 bg-cyan-50 text-cyan-700"
+                          : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                       }`}
                     >
                       <p className="text-sm font-semibold">{screen.sizeLabel}</p>
@@ -204,8 +196,8 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
             {/* Touch Screen Selection */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-white font-semibold">Touch Screen</label>
-                <span className="text-gray-400 text-xs bg-gray-800 px-2 py-1 rounded">
+                <label className="text-gray-900 font-semibold">Touch Screen</label>
+                <span className="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">
                   Touch
                 </span>
               </div>
@@ -216,8 +208,8 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                   }
                   className={`p-4 rounded-xl border-2 transition-all ${
                     selections.hasTouchScreen
-                      ? "border-cyan-500 bg-cyan-500/20 text-white"
-                      : "border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600"
+                      ? "border-cyan-500 bg-cyan-50 text-cyan-700"
+                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                   }`}
                 >
                   <p className="font-semibold">Touch</p>
@@ -228,8 +220,8 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                   }
                   className={`p-4 rounded-xl border-2 transition-all ${
                     !selections.hasTouchScreen
-                      ? "border-cyan-500 bg-cyan-500/20 text-white"
-                      : "border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600"
+                      ? "border-cyan-500 bg-cyan-50 text-cyan-700"
+                      : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                   }`}
                 >
                   <p className="font-semibold">Non-Touch</p>
@@ -240,8 +232,8 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
             {/* RAM Selection */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-white font-semibold">RAM</label>
-                <span className="text-gray-400 text-xs bg-gray-800 px-2 py-1 rounded">
+                <label className="text-gray-900 font-semibold">RAM</label>
+                <span className="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">
                   Memory
                 </span>
               </div>
@@ -254,14 +246,14 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                     }
                     className={`p-3 rounded-xl border-2 transition-all ${
                       selections.ramId === ram.id
-                        ? "border-cyan-500 bg-cyan-500/20 text-white"
-                        : "border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600"
+                        ? "border-cyan-500 bg-cyan-50 text-cyan-700"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                     }`}
                   >
                     <p className="text-sm font-semibold">{ram.capacityLabel}</p>
                   </button>
                 ))}
-                <button className="p-3 rounded-xl border-2 border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600 transition-all">
+                <button className="p-3 rounded-xl border-2 border-gray-200 bg-white text-gray-700 hover:border-gray-300 transition-all">
                   <p className="text-sm font-semibold">Other</p>
                 </button>
               </div>
@@ -270,8 +262,8 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
             {/* Storage Selection */}
             <div className="mb-8">
               <div className="flex items-center justify-between mb-3">
-                <label className="text-white font-semibold">Hard Disk / SSD</label>
-                <span className="text-gray-400 text-xs bg-gray-800 px-2 py-1 rounded">
+                <label className="text-gray-900 font-semibold">Hard Disk / SSD</label>
+                <span className="text-gray-500 text-xs bg-gray-100 px-2 py-1 rounded">
                   Storage
                 </span>
               </div>
@@ -284,22 +276,22 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                     }
                     className={`p-3 rounded-xl border-2 transition-all ${
                       selections.storageId === storage.id
-                        ? "border-cyan-500 bg-cyan-500/20 text-white"
-                        : "border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600"
+                        ? "border-cyan-500 bg-cyan-50 text-cyan-700"
+                        : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
                     }`}
                   >
                     <p className="text-sm font-semibold">{storage.storageLabel}</p>
                   </button>
                 ))}
-                <button className="p-3 rounded-xl border-2 border-gray-700 bg-gray-800 text-gray-300 hover:border-gray-600 transition-all">
+                <button className="p-3 rounded-xl border-2 border-gray-200 bg-white text-gray-700 hover:border-gray-300 transition-all">
                   <p className="text-sm font-semibold">Other</p>
                 </button>
               </div>
             </div>
 
             {/* Status Message */}
-            <div className="bg-gray-800/50 rounded-xl p-4 border border-gray-700 mb-6">
-              <p className="text-gray-300 text-sm">
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 mb-6">
+              <p className="text-gray-600 text-sm">
                 {isFormValid
                   ? "✓ All required details collected. Ready to continue!"
                   : "Please select Processor, RAM, and Storage to continue."}
@@ -313,7 +305,7 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
               className={`w-full py-4 rounded-xl font-semibold transition-all flex items-center justify-center ${
                 isFormValid
                   ? "bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl"
-                  : "bg-gray-700 text-gray-500 cursor-not-allowed"
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
               }`}
             >
               <span className="text-lg">Continue</span>
@@ -336,15 +328,15 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
 
         {/* Right Side - Device Summary */}
         <div className="lg:col-span-1">
-          <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-3xl p-6 border border-gray-700 sticky top-8">
-            <p className="text-gray-400 text-xs uppercase tracking-wider mb-4">
+          <div className="bg-white rounded-3xl p-6 border border-gray-200 shadow-sm sticky top-8">
+            <p className="text-gray-500 text-xs uppercase tracking-wider mb-4">
               DEVICE EVALUATION
             </p>
 
             {/* Device Info */}
             <div className="flex items-center mb-6">
               {brand.iconUrl && (
-                <div className="w-16 h-16 rounded-xl bg-gray-800 flex items-center justify-center mr-4 p-2">
+                <div className="w-16 h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center mr-4 p-2">
                   <Image
                     src={brand.iconUrl}
                     alt={brand.name}
@@ -355,21 +347,21 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                 </div>
               )}
               <div>
-                <h3 className="text-white font-bold text-lg">{model.name}</h3>
-                <p className="text-gray-400 text-sm">
+                <h3 className="text-gray-900 font-bold text-lg">{model.name}</h3>
+                <p className="text-gray-500 text-sm">
                   {brand.brandType} • {brand.name} laptop
                 </p>
               </div>
             </div>
 
             {/* Does the laptop switch ON? */}
-            <div className="border-t border-gray-700 pt-4 mb-4">
+            <div className="border-t border-gray-200 pt-4 mb-4">
               <div className="flex justify-between items-center">
-                <span className="text-gray-400 text-sm">
+                <span className="text-gray-500 text-sm">
                   Does the laptop switch ON?
                 </span>
-                <span className="text-green-400 text-sm flex items-center">
-                  <div className="w-2 h-2 rounded-full bg-green-400 mr-2"></div>
+                <span className="text-green-600 text-sm flex items-center">
+                  <div className="w-2 h-2 rounded-full bg-green-500 mr-2"></div>
                   Yes
                 </span>
               </div>
@@ -377,10 +369,10 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
 
             {/* Selected Configurations */}
             {selections.processorId && (
-              <div className="border-t border-gray-700 pt-4 mb-4">
+              <div className="border-t border-gray-200 pt-4 mb-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Processor</span>
-                  <span className="text-white text-sm font-medium">
+                  <span className="text-gray-500 text-sm">Processor</span>
+                  <span className="text-gray-900 text-sm font-medium">
                     {processors.find((p) => p.id === selections.processorId)
                       ?.processorName || "Not selected"}
                   </span>
@@ -389,10 +381,10 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
             )}
 
             {selections.ramId && (
-              <div className="border-t border-gray-700 pt-4 mb-4">
+              <div className="border-t border-gray-200 pt-4 mb-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">RAM</span>
-                  <span className="text-white text-sm font-medium">
+                  <span className="text-gray-500 text-sm">RAM</span>
+                  <span className="text-gray-900 text-sm font-medium">
                     {ramOptions.find((r) => r.id === selections.ramId)
                       ?.capacityLabel || "Not selected"}
                   </span>
@@ -401,10 +393,10 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
             )}
 
             {selections.storageId && (
-              <div className="border-t border-gray-700 pt-4 mb-4">
+              <div className="border-t border-gray-200 pt-4 mb-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-400 text-sm">Hard Disk / SSD</span>
-                  <span className="text-white text-sm font-medium">
+                  <span className="text-gray-500 text-sm">Hard Disk / SSD</span>
+                  <span className="text-gray-900 text-sm font-medium">
                     {storageOptions.find((s) => s.id === selections.storageId)
                       ?.storageLabel || "Not selected"}
                   </span>
@@ -413,8 +405,8 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
             )}
 
             {/* Progress Info */}
-            <div className="mt-6 bg-gray-800/50 rounded-xl p-4 border border-gray-700">
-              <p className="text-cyan-400 text-xs">
+            <div className="mt-6 bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <p className="text-cyan-600 text-xs">
                 • You're just a couple of taps away from seeing your final value.
               </p>
             </div>

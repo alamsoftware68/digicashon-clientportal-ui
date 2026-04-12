@@ -1437,10 +1437,7 @@ class ApiService {
       return this.handleResponse<{
         id: number;
         processorName: string;
-        brand: string;
         generation: string;
-        coreCount: number;
-        baseClockSpeed: number;
         priceImpact: number;
         displayOrder: number;
         enabled: boolean;
@@ -1471,8 +1468,6 @@ class ApiService {
       return this.handleResponse<{
         id: number;
         graphicsName: string;
-        brand: string;
-        vramGb: number;
         priceImpact: number;
         displayOrder: number;
         enabled: boolean;
@@ -1503,8 +1498,6 @@ class ApiService {
       return this.handleResponse<{
         id: number;
         capacityLabel: string;
-        capacityMb: number;
-        ramType: string;
         priceImpact: number;
         displayOrder: number;
         enabled: boolean;
@@ -1535,8 +1528,6 @@ class ApiService {
       return this.handleResponse<{
         id: number;
         storageLabel: string;
-        storageType: string;
-        capacityGb: number;
         priceImpact: number;
         displayOrder: number;
         enabled: boolean;
@@ -1567,8 +1558,6 @@ class ApiService {
       return this.handleResponse<{
         id: number;
         sizeLabel: string;
-        minInches: number;
-        maxInches: number;
         priceImpact: number;
         displayOrder: number;
         enabled: boolean;
@@ -1814,9 +1803,7 @@ class ApiService {
 
       const response = await fetch(url, {
         method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
       });
 
       return this.handleResponse(response);

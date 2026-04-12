@@ -5,6 +5,7 @@ import apiService from '../../services/api';
 import { Order, ORDER_STATUS_DISPLAY, ORDER_STATUS_COLORS } from '../../types/orders';
 import { useAuth } from '../../contexts/AuthContext';
 import OrderDetailsViewModal from '../OrderDetailsViewModal';
+import SellOrderDetailsModal from '../SellOrderDetailsModal';
 
 const OrdersHistory = () => {
   const { user } = useAuth();
@@ -12,6 +13,7 @@ const OrdersHistory = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [selectedOrderNumber, setSelectedOrderNumber] = useState<string>('');
+  const [selectedSellOrder, setSelectedSellOrder] = useState<any | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('All');
   const [cancellingOrderId, setCancellingOrderId] = useState<number | null>(null);
   const [showCancelConfirmation, setShowCancelConfirmation] = useState<number | null>(null);
@@ -22,91 +24,130 @@ const OrdersHistory = () => {
     fetchOrders();
   }, []);
 
+  // Map device_evaluations status → display status
+  const mapEvalStatus = (status: string): string => {
+    switch (status) {
+      case 'APPROVED':      return 'CONFIRMED';
+      case 'ORDER_CREATED': return 'IN_PROGRESS';
+      case 'REJECTED':      return 'CANCELLED';
+      case 'EXPIRED':       return 'CANCELLED';
+      default:              return 'PENDING'; // PENDING
+    }
+  };
+
   const fetchOrders = async () => {
     try {
       setIsLoading(true);
       setError(null);
-      
-      // First, load laptop sell orders from localStorage
-      const sellOrders = JSON.parse(localStorage.getItem('laptop_sell_orders') || '[]');
-      const transformedSellOrders = sellOrders.map((sellOrder: any) => ({
-        id: sellOrder.id,
-        orderNumber: sellOrder.orderNumber,
-        status: sellOrder.status,
-        totalPrice: sellOrder.totalAmount,
-        createdAt: sellOrder.orderDate,
-        address: { address: sellOrder.address },
-        service: {
-          name: `${sellOrder.deviceName} - Laptop Sell`,
-          deviceType: 'LAPTOP_SELL'
+
+      const repairOrdersPromise = apiService.getMyOrders();
+      const evalUserId = user?.id ? parseInt(user.id) : 1;
+      // Fetch evaluations for the logged-in user's ID.
+      // Also fetch for userId=1 as fallback (covers evaluations created before proper userId was wired up).
+      const evalIds = evalUserId === 1 ? [1] : [evalUserId, 1];
+      const evalOrdersPromise = Promise.all(
+        evalIds.map(id => apiService.getUserDeviceEvaluations(id).catch(() => ({ success: false, data: undefined })))
+      );
+
+      const [repairResult, evalResults] = await Promise.allSettled([
+        repairOrdersPromise,
+        evalOrdersPromise,
+      ]);
+
+      // Merge eval results from both user IDs, deduplicate by ID
+      const evalResult = {
+        status: 'fulfilled' as const,
+        value: {
+          success: true,
+          data: evalResults.status === 'fulfilled'
+            ? (() => {
+                const seen = new Set<number>();
+                return evalResults.value
+                  .flatMap((r: any) => (r?.success && Array.isArray(r?.data) ? r.data : []))
+                  .filter((ev: any) => {
+                    if (seen.has(ev.id)) return false;
+                    seen.add(ev.id);
+                    return true;
+                  });
+              })()
+            : [],
         },
-        isLaptopSell: true,
-        deviceDetails: {
-          name: sellOrder.deviceName,
-          processor: sellOrder.processor,
-          ram: sellOrder.ram,
-          storage: sellOrder.storage,
-          brand: sellOrder.brand
-        },
-        pickupDate: sellOrder.pickupDate,
-        pickupTimeSlot: sellOrder.pickupTimeSlot,
-        technician: null
-      }));
-      
-      // Try to fetch API orders
-      try {
-        const result = await apiService.getMyOrders();
-        
-        if (result.success && result.data) {
-          // Merge API orders with localStorage sell orders
-          const apiOrders = result.data as Order[];
-          const allOrders = [...transformedSellOrders, ...apiOrders];
-          const sortedOrders = allOrders.sort((a, b) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-          setOrders(sortedOrders);
-          console.log('Orders fetched successfully:', sortedOrders);
-        } else {
-          // If API fails, still show localStorage orders
-          setOrders(transformedSellOrders);
-          console.log('Using only localStorage orders:', transformedSellOrders);
-        }
-      } catch (apiError: any) {
-        console.warn('API call failed, using localStorage orders only:', apiError);
-        // If API call fails, still show localStorage orders
-        setOrders(transformedSellOrders);
-      }
+      };
+
+      // ── Repair orders ──────────────────────────────────────────────────────
+      const repairOrders: Order[] =
+        repairResult.status === 'fulfilled' &&
+        repairResult.value?.success &&
+        repairResult.value?.data
+          ? (repairResult.value.data as Order[])
+          : [];
+
+      // ── Sell orders from device_evaluations ───────────────────────────────
+      const evalOrders: Order[] =
+        evalResult.status === 'fulfilled' &&
+        evalResult.value?.success &&
+        evalResult.value?.data
+          ? (evalResult.value.data as any[])
+            // PENDING = price quote not yet placed; only show orders the user confirmed
+            .filter((ev: any) => ev.status !== 'PENDING')
+            .map((ev: any) => ({
+              id: ev.id,
+              orderNumber: `SELL-${ev.id}`,
+              status: mapEvalStatus(ev.status),
+              totalPrice: ev.finalPrice,
+              createdAt: ev.createdAt,
+              updatedAt: ev.updatedAt,
+              pickupAddress: '',
+              address: { id: 0, type: '', address: '', city: '', state: '', zipCode: '', isDefault: false, fullAddress: '' },
+              service: {
+                id: 0,
+                name: `${ev.brandName ?? ''} ${ev.brandModelName ?? ''} - ${ev.superCategory ?? ''} Sell`,
+                description: '',
+                deviceType: `${(ev.superCategory ?? 'DEVICE').toUpperCase()}_SELL`,
+                basePrice: ev.finalPrice,
+                estimatedDurationHours: 0,
+                isActive: true,
+                isFeatured: false,
+              },
+              services: [{
+                name: `${ev.brandName ?? ''} ${ev.brandModelName ?? ''}`,
+                category: `${ev.superCategory ?? ''} Sell`,
+                quantity: 1,
+                price: ev.finalPrice,
+                totalPrice: ev.finalPrice,
+              }],
+              technician: null,
+              // Extra sell-order fields for display
+              isSellOrder: true,
+              deviceDetails: {
+                name: `${ev.brandName ?? ''} ${ev.brandModelName ?? ''}`,
+                processor: ev.processorName ?? '',
+                ram: ev.ramLabel ?? '',
+                storage: ev.storageLabel ?? '',
+                graphics: ev.graphicsName ?? '',
+                screenSize: ev.screenSizeLabel ?? '',
+                conditionCode: ev.conditionCode ?? '',
+                ageCode: ev.ageCode ?? '',
+              },
+            }))
+          : [];
+
+      const allOrders = [...evalOrders, ...repairOrders].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setOrders(allOrders);
     } catch (error: any) {
       console.error('Error fetching orders:', error);
       setError(error.message || 'Failed to fetch orders');
-      // Even on error, try to show localStorage orders
-      try {
-        const sellOrders = JSON.parse(localStorage.getItem('laptop_sell_orders') || '[]');
-        if (sellOrders.length > 0) {
-          const transformedOrders = sellOrders.map((sellOrder: any) => ({
-            id: sellOrder.id,
-            orderNumber: sellOrder.orderNumber,
-            status: sellOrder.status,
-            totalPrice: sellOrder.totalAmount,
-            createdAt: sellOrder.orderDate,
-            address: { address: sellOrder.address },
-            service: {
-              name: `${sellOrder.deviceName} - Laptop Sell`,
-              deviceType: 'LAPTOP_SELL'
-            },
-            isLaptopSell: true,
-            technician: null
-          }));
-          setOrders(transformedOrders);
-        }
-      } catch {}
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredOrders = filterStatus === 'All' 
-    ? orders 
+  const filteredOrders = filterStatus === 'All'
+    ? orders
+    : filterStatus === 'SELL'
+    ? orders.filter(order => (order as any).isSellOrder)
     : orders.filter(order => order.status === filterStatus);
 
   const formatDate = (dateString: string) => {
@@ -306,6 +347,7 @@ const OrdersHistory = () => {
             className="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="All">All Orders</option>
+            <option value="SELL">Sell Orders</option>
             <option value="PICKUP_REQUESTED">Pickup Requested</option>
             <option value="PENDING">Pending</option>
             <option value="CONFIRMED">Confirmed</option>
@@ -348,26 +390,25 @@ const OrdersHistory = () => {
                           const serviceInfo = getOrderServiceInfo(order);
                           return (
                             <div>
-                              <h3 className="text-lg font-semibold text-gray-900">
-                                {serviceInfo.isMultipleServices ? (
-                                  <>Multiple Services ({serviceInfo.serviceCount} items)</>
-                                ) : (
-                                  serviceInfo.primaryServiceName
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="text-lg font-semibold text-gray-900">
+                                  {serviceInfo.isMultipleServices ? (
+                                    <>Multiple Services ({serviceInfo.serviceCount} items)</>
+                                  ) : (
+                                    serviceInfo.primaryServiceName
+                                  )}
+                                </h3>
+                                {(order as any).isSellOrder && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                    💰 Sell Order
+                                  </span>
                                 )}
-                              </h3>
-                              <p className="text-sm text-gray-600 mt-1">
-                                {serviceInfo.isMultipleServices ? (
-                                  serviceInfo.allServiceNames
-                                ) : (
-                                  serviceInfo.primaryServiceCategory
-                                )}
+                              </div>
+                              <p className="text-sm text-gray-500 mt-0.5">
+                                {serviceInfo.isMultipleServices
+                                  ? serviceInfo.allServiceNames
+                                  : serviceInfo.primaryServiceCategory}
                               </p>
-                              {/* Add a small indicator showing data source */}
-                              {serviceInfo.services && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 mt-1">
-                                  ✓ Cart Data Available
-                                </span>
-                              )}
                             </div>
                           );
                         })()}
@@ -384,6 +425,27 @@ const OrdersHistory = () => {
                   </div>
                 </div>
                 
+                {/* Sell order specs strip */}
+                {(order as any).isSellOrder && (order as any).deviceDetails && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {(order as any).deviceDetails.processor && (
+                      <span className="bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full">
+                        {(order as any).deviceDetails.processor}
+                      </span>
+                    )}
+                    {(order as any).deviceDetails.ram && (
+                      <span className="bg-blue-50 text-blue-600 text-xs px-2.5 py-1 rounded-full">
+                        {(order as any).deviceDetails.ram}
+                      </span>
+                    )}
+                    {(order as any).deviceDetails.storage && (
+                      <span className="bg-purple-50 text-purple-600 text-xs px-2.5 py-1 rounded-full">
+                        {(order as any).deviceDetails.storage}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm text-gray-600">
                   <div>
                     <span className="font-medium">Order Number:</span>
@@ -395,17 +457,29 @@ const OrdersHistory = () => {
                   </div>
                   <div>
                     <span className="font-medium">Price:</span>
-                    <p className="text-gray-900 font-semibold">{formatPrice(order.totalPrice)}</p>
+                    <p className={`font-semibold ${(order as any).isSellOrder ? 'text-emerald-600' : 'text-gray-900'}`}>
+                      {formatPrice(order.totalPrice)}
+                    </p>
                   </div>
                   <div>
-                    <span className="font-medium">Technician:</span>
-                    <p className="text-gray-900">{order.technician ? order.technician.name || 'Assigned' : 'Not Assigned'}</p>
+                    <span className="font-medium">{(order as any).isSellOrder ? 'Type:' : 'Technician:'}</span>
+                    <p className="text-gray-900">
+                      {(order as any).isSellOrder
+                        ? 'Device Sell'
+                        : (order.technician ? (order.technician as any).name || 'Assigned' : 'Not Assigned')}
+                    </p>
                   </div>
                 </div>
 
                 <div className="flex items-center space-x-2 mt-4">
                   <button
-                    onClick={() => setSelectedOrderNumber(order.orderNumber)}
+                    onClick={() => {
+                      if ((order as any).isSellOrder) {
+                        setSelectedSellOrder(order);
+                      } else {
+                        setSelectedOrderNumber(order.orderNumber);
+                      }
+                    }}
                     className="px-4 py-2 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors font-medium"
                   >
                     View Details
@@ -431,6 +505,13 @@ const OrdersHistory = () => {
         isOpen={!!selectedOrderNumber}
         onClose={() => setSelectedOrderNumber('')}
         orderNumber={selectedOrderNumber}
+      />
+
+      {/* Sell Order Details Modal (renders from in-memory order object) */}
+      <SellOrderDetailsModal
+        isOpen={!!selectedSellOrder}
+        onClose={() => setSelectedSellOrder(null)}
+        order={selectedSellOrder}
       />
       
       {/* Cancel Order Confirmation Modal */}

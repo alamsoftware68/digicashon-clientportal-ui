@@ -25,6 +25,7 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
   const [storageOptions, setStorageOptions] = useState<any[]>([]);
   const [screenSizes, setScreenSizes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const [selections, setSelections] = useState({
     processorId: null as number | null,
@@ -39,6 +40,7 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
     const fetchConfigurations = async () => {
       try {
         setLoading(true);
+        setFetchError(null);
         const [procResp, graphResp, ramResp, storResp, screenResp] =
           await Promise.all([
             apiService.getProcessors(),
@@ -53,8 +55,14 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
         if (ramResp.success) setRamOptions(ramResp.data || []);
         if (storResp.success) setStorageOptions(storResp.data || []);
         if (screenResp.success) setScreenSizes(screenResp.data || []);
-      } catch (error) {
+
+        const allFailed = !procResp.success && !ramResp.success && !storResp.success;
+        if (allFailed) {
+          setFetchError("Could not connect to server. Please make sure the backend service is running.");
+        }
+      } catch (error: any) {
         console.error("Error fetching configurations:", error);
+        setFetchError(error?.message || "Failed to load configuration options. Please check the server connection.");
       } finally {
         setLoading(false);
       }
@@ -77,6 +85,23 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
     return (
       <div className="flex items-center justify-center py-20">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500"></div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 max-w-md text-center">
+          <p className="text-red-600 font-semibold mb-2">Connection Error</p>
+          <p className="text-red-500 text-sm">{fetchError}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-6 py-2 bg-red-500 text-white rounded-xl text-sm hover:bg-red-600 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -131,7 +156,7 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                 <option value="">Select processor...</option>
                 {processors.map((proc) => (
                   <option key={proc.id} value={proc.id}>
-                    {proc.processorName} - {proc.brand} {proc.generation}
+                    {proc.processorName}{proc.generation ? ` (${proc.generation})` : ""}
                   </option>
                 ))}
               </select>
@@ -158,7 +183,7 @@ const SystemConfigStep: React.FC<SystemConfigStepProps> = ({
                 <option value="">Select graphics card...</option>
                 {graphics.map((graph) => (
                   <option key={graph.id} value={graph.id}>
-                    {graph.graphicsName} - {graph.vramGb}GB
+                    {graph.graphicsName}
                   </option>
                 ))}
               </select>

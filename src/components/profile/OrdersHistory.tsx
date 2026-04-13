@@ -41,35 +41,22 @@ const OrdersHistory = () => {
       setError(null);
 
       const repairOrdersPromise = apiService.getMyOrders();
-      const evalUserId = user?.id ? parseInt(user.id) : 1;
-      // Fetch evaluations for the logged-in user's ID.
-      // Also fetch for userId=1 as fallback (covers evaluations created before proper userId was wired up).
-      const evalIds = evalUserId === 1 ? [1] : [evalUserId, 1];
-      const evalOrdersPromise = Promise.all(
-        evalIds.map(id => apiService.getUserDeviceEvaluations(id).catch(() => ({ success: false, data: undefined })))
-      );
+      const evalUserId = user?.id ? parseInt(user.id) : null;
+      const evalOrdersPromise = evalUserId
+        ? apiService.getUserDeviceEvaluations(evalUserId).catch(() => ({ success: false, data: undefined }))
+        : Promise.resolve({ success: false, data: undefined });
 
       const [repairResult, evalResults] = await Promise.allSettled([
         repairOrdersPromise,
         evalOrdersPromise,
       ]);
 
-      // Merge eval results from both user IDs, deduplicate by ID
       const evalResult = {
         status: 'fulfilled' as const,
         value: {
           success: true,
-          data: evalResults.status === 'fulfilled'
-            ? (() => {
-                const seen = new Set<number>();
-                return evalResults.value
-                  .flatMap((r: any) => (r?.success && Array.isArray(r?.data) ? r.data : []))
-                  .filter((ev: any) => {
-                    if (seen.has(ev.id)) return false;
-                    seen.add(ev.id);
-                    return true;
-                  });
-              })()
+          data: evalResults.status === 'fulfilled' && (evalResults.value as any)?.success
+            ? (evalResults.value as any).data ?? []
             : [],
         },
       };

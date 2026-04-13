@@ -1820,7 +1820,12 @@ class ApiService {
   /**
    * Approve a device evaluation (user accepts the price)
    */
-  async approveDeviceEvaluation(evaluationId: number) {
+  async approveDeviceEvaluation(evaluationId: number, pickupDetails?: {
+    pickupAddress?: string;
+    addressType?: string;
+    pickupDate?: string;
+    pickupTimeSlot?: string;
+  }) {
     try {
       console.log('[API] Approving device evaluation:', evaluationId);
       const response = await fetch(`${this.baseUrl}/devices/evaluations/${evaluationId}/approve`, {
@@ -1828,6 +1833,7 @@ class ApiService {
         headers: {
           'Content-Type': 'application/json',
         },
+        body: pickupDetails ? JSON.stringify(pickupDetails) : undefined,
       });
 
       return this.handleResponse(response);

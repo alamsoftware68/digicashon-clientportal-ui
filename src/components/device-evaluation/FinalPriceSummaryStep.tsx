@@ -253,16 +253,17 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
     setPlacingOrder(true);
     setOrderError(null);
     try {
-      const res = await apiService.approveDeviceEvaluation(priceData.id);
+      const addrParts = [summaryAddress?.address, summaryAddress?.city, summaryAddress?.state, summaryAddress?.zipCode].filter(Boolean);
+      const pickupDetails = {
+        pickupAddress: summaryAddress?.fullAddress || addrParts.join(', '),
+        addressType: summaryAddress?.type || 'Home',
+        pickupDate: summaryDate?.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' }),
+        pickupTimeSlot: summaryTimeSlot ?? undefined,
+      };
+      const res = await apiService.approveDeviceEvaluation(priceData.id, pickupDetails);
       if (res.success) {
         // Persist address + schedule so the Order Details modal can display them
-        const addrParts = [summaryAddress?.address, summaryAddress?.city, summaryAddress?.state, summaryAddress?.zipCode].filter(Boolean);
-        localStorage.setItem(`sell_order_meta_${priceData.id}`, JSON.stringify({
-          pickupAddress: summaryAddress?.fullAddress || addrParts.join(', '),
-          addressType: summaryAddress?.type || 'Home',
-          pickupDate: summaryDate?.toLocaleDateString('en-IN', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' }),
-          pickupTimeSlot: summaryTimeSlot,
-        }));
+        localStorage.setItem(`sell_order_meta_${priceData.id}`, JSON.stringify(pickupDetails));
         setOrderId(`ORD-EVAL-${priceData.id}`);
         setShowOrderSummary(false);
         setShowSuccess(true);

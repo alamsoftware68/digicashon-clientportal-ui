@@ -566,8 +566,8 @@ const OrderDetailsViewModal: React.FC<OrderDetailsViewModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 overflow-hidden max-h-[92vh]">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl transform transition-all duration-300 scale-100 overflow-hidden my-8">
         {/* Compact Header */}
         <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 border-b border-slate-700">
           <div className="flex items-center justify-between">

@@ -77,8 +77,8 @@ const OrderDetailsModal: React.FC<OrderDetailsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4">
-      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-md sm:max-w-lg transform transition-all duration-300 scale-100 overflow-hidden max-h-[95vh] sm:max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-start justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-md sm:max-w-lg transform transition-all duration-300 scale-100 overflow-hidden my-8">
         {/* Compact Header */}
         <div className="bg-gradient-to-r from-green-600 to-teal-600 text-white p-3 sm:p-4">
           <div className="flex items-center justify-between">

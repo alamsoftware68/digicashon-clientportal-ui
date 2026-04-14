@@ -1848,6 +1848,36 @@ class ApiService {
   }
 
   /**
+   * Save temp lead for non-logged-in users who viewed their device price
+   */
+  async saveTempLead(data: {
+    mobile: string;
+    superCategory?: string;
+    brandName?: string;
+    brandModelName?: string;
+    processorName?: string;
+    ramLabel?: string;
+    storageLabel?: string;
+    graphicsName?: string;
+    screenSizeLabel?: string;
+    conditionCode?: string | null;
+    ageCode?: string | null;
+    finalPrice?: number;
+    evaluationId?: number;
+  }) {
+    try {
+      const response = await fetch(`${this.baseUrl}/devices/temp-leads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      return this.handleResponse(response);
+    } catch (error: any) {
+      return { success: false, message: error.message || 'Failed to save temp lead', data: undefined };
+    }
+  }
+
+  /**
    * Reject a device evaluation (user declines the price)
    */
   async rejectDeviceEvaluation(evaluationId: number) {

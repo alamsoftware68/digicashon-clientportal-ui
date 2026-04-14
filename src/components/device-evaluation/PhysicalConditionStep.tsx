@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import apiService from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BrandModel {
   id: number;
@@ -103,6 +104,7 @@ const PhysicalConditionStep: React.FC<PhysicalConditionStepProps> = ({
   onSelect,
   onMobileSubmit,
 }) => {
+  const { user, isLoggedIn } = useAuth();
   const [conditionOptions, setConditionOptions] = useState<ConditionOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMobileModal, setShowMobileModal] = useState(false);
@@ -134,7 +136,12 @@ const PhysicalConditionStep: React.FC<PhysicalConditionStepProps> = ({
   const handleConditionSelection = (conditionCode: string) => {
     setSelectedCondition(conditionCode);
     onSelect(conditionCode);
-    setShowMobileModal(true);
+    if (isLoggedIn && user?.phone) {
+      // Logged-in user: skip mobile modal, use registered phone
+      onMobileSubmit(user.phone);
+    } else {
+      setShowMobileModal(true);
+    }
   };
 
   const validateMobileNumber = (number: string): boolean => {

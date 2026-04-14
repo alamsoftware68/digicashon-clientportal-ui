@@ -164,13 +164,46 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
   const [orderId,      setOrderId]      = useState<string>("");
 
   // ── Calculate price on mount ───────────────────────────────────────────────
+  // Read userId synchronously from localStorage to avoid AuthContext race condition.
+  // AuthContext loads from localStorage in its own useEffect (runs after children),
+  // so `user` is null on first render even for logged-in users.
+  const getLoggedInUserId = (): number => {
+    if (typeof window === "undefined") return 1;
+    try {
+      const savedUser = localStorage.getItem("repairapp_user");
+      const isAuth = localStorage.getItem("repairapp_authenticated") === "true";
+      if (savedUser && isAuth) {
+        const parsed = JSON.parse(savedUser);
+        if (parsed?.id) return parseInt(parsed.id);
+      }
+    } catch { /* ignore */ }
+    return 1;
+  };
+
   useEffect(() => {
     (async () => {
       try {
         setLoading(true);
         setCalcError("");
+        // Use registered phone for logged-in users; popup number for guests.
+        // Read from localStorage synchronously to avoid AuthContext race condition.
+        const getLoggedInPhone = (): string | null => {
+          if (typeof window === "undefined") return null;
+          try {
+            const savedUser = localStorage.getItem("repairapp_user");
+            const isAuth = localStorage.getItem("repairapp_authenticated") === "true";
+            if (savedUser && isAuth) {
+              const parsed = JSON.parse(savedUser);
+              return parsed?.phone ?? null;
+            }
+          } catch { /* ignore */ }
+          return null;
+        };
+        const loggedInPhone = getLoggedInPhone();
+        const effectiveMobile = loggedInPhone ?? evaluationData.mobileNumber;
+
         const req = {
-          userId: user?.id ? parseInt(user.id) : 1,
+          userId: getLoggedInUserId(),
           superCategory: evaluationData.superCategory,
           category:      evaluationData.superCategory,
           brandId:       evaluationData.brandId,
@@ -185,11 +218,34 @@ const FinalPriceSummaryStep: React.FC<FinalPriceSummaryStepProps> = ({
           hasBox:        evaluationData.hasBox,
           ageCode:       evaluationData.ageCode!,
           functionalIssueIds: evaluationData.functionalIssueIds,
-          notes: `Customer mobile: ${evaluationData.mobileNumber}`,
+          notes: `Customer mobile: ${effectiveMobile}`,
         };
         const res = await apiService.calculateDevicePrice(req);
         if (res.success && res.data) {
           setPriceData(res.data);
+          // Save temp lead only for non-logged-in users
+          // Use localStorage check (not isLoggedIn) to avoid same race condition
+          const isActuallyLoggedIn = typeof window !== "undefined"
+            && localStorage.getItem("repairapp_authenticated") === "true";
+          if (!isActuallyLoggedIn && effectiveMobile) {
+            try {
+              await apiService.saveTempLead({
+                mobile: effectiveMobile,
+                superCategory: evaluationData.superCategory,
+                brandName: evaluationData.brandName,
+                brandModelName: evaluationData.brandModelName,
+                processorName: res.data.processorName,
+                ramLabel: res.data.ramLabel,
+                storageLabel: res.data.storageLabel,
+                graphicsName: res.data.graphicsName,
+                screenSizeLabel: res.data.screenSizeLabel,
+                conditionCode: evaluationData.conditionCode,
+                ageCode: evaluationData.ageCode,
+                finalPrice: res.data.finalPrice,
+                evaluationId: res.data.id,
+              });
+            } catch (err) { console.warn("Temp lead save failed:", err); }
+          }
         } else {
           setCalcError(res.message || "Failed to calculate price");
         }
